@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { FinancialAssetsBanner } from './FinancialAssetsBanner';
 import { NewsBanner } from './NewsBanner';
+import { FloatingElements } from './FloatingElements';
+import { CandlestickPattern } from './CandlestickPattern';
+import { AnimatedChart } from './AnimatedChart';
 import { TrendingUp, TrendingDown, BarChart3, Shield, Users, Zap } from 'lucide-react';
 
 export function HomePage() {
@@ -42,14 +45,27 @@ export function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 relative overflow-hidden">
+      {/* Floating Background Elements */}
+      <FloatingElements />
+      <CandlestickPattern />
+      <AnimatedChart />
+      
+      {/* Animated Background Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-green-500/5 animate-pulse" />
+      
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b shadow-sm sticky top-0 z-50">
+      <header className="bg-white/90 backdrop-blur-lg border-b shadow-sm sticky top-0 z-50 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <BarChart3 className="h-8 w-8 text-blue-600 mr-3" />
-              <h1 className="text-xl font-bold text-gray-900">InvestPro</h1>
+              <div className="relative">
+                <BarChart3 className="h-8 w-8 text-blue-600 mr-3 animate-pulse" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping" />
+              </div>
+              <h1 className="text-xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                InvestPro
+              </h1>
             </div>
             <div className="flex items-center space-x-4">
               {user && (
@@ -57,10 +73,10 @@ export function HomePage() {
                   <span className="text-sm text-gray-700">
                     Olá, {user.full_name || user.email}
                   </span>
-                  <Badge variant={user.role === 'manager' ? 'default' : 'secondary'}>
+                  <Badge variant={user.role === 'manager' ? 'default' : 'secondary'} className="animate-bounce">
                     {user.role}
                   </Badge>
-                  <Button variant="outline" size="sm" onClick={signOut}>
+                  <Button variant="outline" size="sm" onClick={signOut} className="hover:scale-105 transition-transform">
                     Sair
                   </Button>
                 </>
@@ -71,36 +87,40 @@ export function HomePage() {
       </header>
 
       {/* Financial Assets Banner */}
-      <FinancialAssetsBanner />
+      <div className="relative z-10">
+        <FinancialAssetsBanner />
+      </div>
 
       {/* Hero Section */}
-      <section className="py-20">
+      <section className="py-20 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Invista com <span className="text-blue-600">Inteligência</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Plataforma completa para trading e investimentos com tecnologia de ponta, 
-            análise em tempo real e gestão profissional de portfólio.
-          </p>
-          <div className="flex justify-center space-x-4">
-            <Button size="lg" className="px-8 py-3">
-              Começar a Investir
-            </Button>
-            <Button variant="outline" size="lg" className="px-8 py-3">
-              Ver Demo
-            </Button>
+          <div className="animate-fade-in">
+            <h1 className="text-5xl font-bold text-gray-900 mb-6">
+              Invista com <span className="text-blue-600 animate-pulse">Inteligência</span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              Plataforma completa para trading e investimentos com tecnologia de ponta, 
+              análise em tempo real e gestão profissional de portfólio.
+            </p>
+            <div className="flex justify-center space-x-4">
+              <Button size="lg" className="px-8 py-3 hover:scale-105 transition-transform animate-bounce">
+                Começar a Investir
+              </Button>
+              <Button variant="outline" size="lg" className="px-8 py-3 hover:scale-105 transition-transform">
+                Ver Demo
+              </Button>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-white/50">
+      <section className="py-16 bg-white/50 backdrop-blur-sm relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-2">{stat.value}</div>
+              <div key={index} className="text-center hover:scale-110 transition-transform duration-300">
+                <div className="text-3xl font-bold text-blue-600 mb-2 animate-pulse">{stat.value}</div>
                 <div className="text-gray-600">{stat.label}</div>
               </div>
             ))}
@@ -109,12 +129,14 @@ export function HomePage() {
       </section>
 
       {/* News Banner */}
-      <NewsBanner />
+      <div className="relative z-10">
+        <NewsBanner />
+      </div>
 
       {/* Features Section */}
-      <section className="py-20">
+      <section className="py-20 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16 animate-fade-in">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               Por que escolher nossa plataforma?
             </h2>
@@ -127,9 +149,9 @@ export function HomePage() {
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <Card key={index} className="text-center hover:shadow-lg transition-shadow">
+                <Card key={index} className="text-center hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
                   <CardHeader>
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4 hover:rotate-12 transition-transform duration-300">
                       <Icon className="h-6 w-6 text-blue-600" />
                     </div>
                     <CardTitle className="text-lg">{feature.title}</CardTitle>
@@ -147,22 +169,24 @@ export function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-800">
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-800 relative z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Pronto para começar a investir?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8">
-            Junte-se a milhares de investidores que já confiam em nossa plataforma
-          </p>
-          <Button size="lg" variant="secondary" className="px-8 py-3">
-            Criar Conta Gratuita
-          </Button>
+          <div className="animate-fade-in">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Pronto para começar a investir?
+            </h2>
+            <p className="text-xl text-blue-100 mb-8">
+              Junte-se a milhares de investidores que já confiam em nossa plataforma
+            </p>
+            <Button size="lg" variant="secondary" className="px-8 py-3 hover:scale-110 transition-transform animate-bounce">
+              Criar Conta Gratuita
+            </Button>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      <footer className="bg-gray-900 text-white py-12 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>

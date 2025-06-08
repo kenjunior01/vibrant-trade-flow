@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           date_of_birth: profile.date_of_birth,
           country: profile.country,
           company: profile.company,
-          role: profile.role === 'account_manager' ? 'manager' : profile.role,
+          role: profile.role === 'super_admin' ? 'superadmin' : profile.role,
           experience_level: profile.experience_level === 'expert' ? 'advanced' : profile.experience_level,
           risk_profile: profile.risk_profile,
           manager_id: profile.manager_id,
