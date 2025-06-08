@@ -58,13 +58,20 @@ export function usePositions() {
 
       if (error) throw error;
 
-      setPositions([data, ...positions]);
+      // Properly type the returned data
+      const newPosition: Position = {
+        ...data,
+        type: data.type as 'long' | 'short',
+        status: data.status as 'open' | 'closed'
+      };
+
+      setPositions([newPosition, ...positions]);
       toast({
         title: "Sucesso",
         description: "Posição aberta com sucesso!",
       });
 
-      return data;
+      return newPosition;
     } catch (error: any) {
       toast({
         title: "Erro",

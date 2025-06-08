@@ -24,7 +24,7 @@ export function SignUpForm({ onToggleMode }: SignUpFormProps) {
     setLoading(true);
     
     try {
-      await signUp(email, password, fullName, role);
+      await signUp(email, password, { full_name: fullName, role });
     } catch (error) {
       // Error handling is done in the auth hook
     } finally {

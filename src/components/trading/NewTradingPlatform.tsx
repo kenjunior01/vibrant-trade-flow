@@ -39,6 +39,7 @@ export function NewTradingPlatform() {
         open_price: orderType === 'market' ? 50000 : parseFloat(price), // Mock price
         leverage: parseInt(leverage),
         status: 'open',
+        pnl: 0, // Add missing pnl property
         close_price: undefined,
         closed_at: undefined,
       });

@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Candlestick, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, ChartCandlestick, Activity } from 'lucide-react';
 
 interface FloatingElement {
   id: number;
@@ -22,7 +22,7 @@ export function FloatingElements() {
     { icon: <TrendingDown className="w-6 h-6" />, color: 'text-red-400' },
     { icon: <DollarSign className="w-6 h-6" />, color: 'text-yellow-400' },
     { icon: <BarChart3 className="w-6 h-6" />, color: 'text-blue-400' },
-    { icon: <Candlestick className="w-6 h-6" />, color: 'text-purple-400' },
+    { icon: <ChartCandlestick className="w-6 h-6" />, color: 'text-purple-400' },
     { icon: <Activity className="w-6 h-6" />, color: 'text-cyan-400' },
   ];
 
