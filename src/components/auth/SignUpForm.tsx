@@ -15,7 +15,7 @@ export function SignUpForm({ onToggleMode }: SignUpFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('trader');
+  const [role, setRole] = useState<'trader' | 'manager'>('trader');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
 
@@ -75,7 +75,7 @@ export function SignUpForm({ onToggleMode }: SignUpFormProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="role">Tipo de Conta</Label>
-            <Select value={role} onValueChange={setRole}>
+            <Select value={role} onValueChange={(value: 'trader' | 'manager') => setRole(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo de conta" />
               </SelectTrigger>
