@@ -1,9 +1,11 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { MarketTicker } from '@/components/MarketTicker';
 import { FinancialAssetsBanner } from './FinancialAssetsBanner';
 import { NewsBanner } from './NewsBanner';
 import { FloatingElements } from './FloatingElements';
@@ -71,6 +73,9 @@ export function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 relative overflow-hidden">
+      {/* Market Ticker - Novo componente no topo */}
+      <MarketTicker />
+      
       {/* Floating Background Elements */}
       <FloatingElements />
       <CandlestickPattern />
