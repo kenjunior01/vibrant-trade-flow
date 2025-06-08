@@ -33,37 +33,39 @@ export function SignUpForm({ onToggleMode }: SignUpFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm transition-colors">
       <CardHeader>
-        <CardTitle>Criar Conta</CardTitle>
-        <CardDescription>
+        <CardTitle className="dark:text-gray-100">Criar Conta</CardTitle>
+        <CardDescription className="dark:text-gray-300">
           Cadastre-se para acessar a plataforma de trading
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Nome Completo</Label>
+            <Label htmlFor="fullName" className="dark:text-gray-200">Nome Completo</Label>
             <Input
               id="fullName"
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
+              className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="dark:text-gray-200">Email</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
+            <Label htmlFor="password" className="dark:text-gray-200">Senha</Label>
             <Input
               id="password"
               type="password"
@@ -71,17 +73,18 @@ export function SignUpForm({ onToggleMode }: SignUpFormProps) {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
+              className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="role">Tipo de Conta</Label>
+            <Label htmlFor="role" className="dark:text-gray-200">Tipo de Conta</Label>
             <Select value={role} onValueChange={(value: 'trader' | 'manager') => setRole(value)}>
-              <SelectTrigger>
+              <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
                 <SelectValue placeholder="Selecione o tipo de conta" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="trader">Trader</SelectItem>
-                <SelectItem value="manager">Gerente</SelectItem>
+              <SelectContent className="dark:bg-gray-700 dark:border-gray-600">
+                <SelectItem value="trader" className="dark:text-gray-100">Trader</SelectItem>
+                <SelectItem value="manager" className="dark:text-gray-100">Gerente</SelectItem>
               </SelectContent>
             </Select>
           </div>
