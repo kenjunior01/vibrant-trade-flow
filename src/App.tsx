@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { AuthPage } from '@/components/auth/AuthPage';
+import { HomePage } from '@/components/home/HomePage';
 import { NewTradingPlatform } from '@/components/trading/NewTradingPlatform';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
@@ -27,7 +28,8 @@ function AppContent() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<NewTradingPlatform />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/trading" element={<NewTradingPlatform />} />
       </Routes>
     </Router>
   );

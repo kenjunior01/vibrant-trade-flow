@@ -14,7 +14,6 @@ export function usePositions() {
   useEffect(() => {
     if (user) {
       fetchPositions();
-      subscribeToPositions();
     }
   }, [user]);
 
@@ -27,7 +26,14 @@ export function usePositions() {
         .order('opened_at', { ascending: false });
 
       if (error) throw error;
-      setPositions(data || []);
+      
+      const typedPositions = (data || []).map(pos => ({
+        ...pos,
+        type: pos.type as 'long' | 'short',
+        status: pos.status as 'open' | 'closed'
+      }));
+      
+      setPositions(typedPositions);
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -39,41 +45,20 @@ export function usePositions() {
     }
   };
 
-  const subscribeToPositions = () => {
-    const channel = supabase
-      .channel('positions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'positions',
-          filter: `user_id=eq.${user?.id}`,
-        },
-        () => {
-          fetchPositions();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  const createPosition = async (positionData: Omit<Position, 'id' | 'user_id' | 'opened_at' | 'pnl'>) => {
+  const createPosition = async (positionData: Omit<Position, 'id' | 'user_id' | 'opened_at'>) => {
     try {
       const { data, error } = await supabase
         .from('positions')
         .insert({
-          ...positionData,
           user_id: user?.id,
+          ...positionData,
         })
         .select()
         .single();
 
       if (error) throw error;
 
+      setPositions([data, ...positions]);
       toast({
         title: "Sucesso",
         description: "Posição aberta com sucesso!",
@@ -90,38 +75,10 @@ export function usePositions() {
     }
   };
 
-  const closePosition = async (positionId: string, closePrice: number) => {
-    try {
-      const { error } = await supabase
-        .from('positions')
-        .update({
-          status: 'closed',
-          close_price: closePrice,
-          closed_at: new Date().toISOString(),
-        })
-        .eq('id', positionId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Posição fechada com sucesso!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: "Erro ao fechar posição",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
   return {
     positions,
     loading,
     createPosition,
-    closePosition,
     refetch: fetchPositions,
   };
 }

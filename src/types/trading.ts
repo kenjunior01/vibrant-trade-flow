@@ -9,7 +9,7 @@ export interface User {
   country?: string;
   company?: string;
   role: 'trader' | 'manager' | 'admin' | 'superadmin';
-  experience_level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  experience_level: 'beginner' | 'intermediate' | 'advanced';
   risk_profile: 'low' | 'medium' | 'high';
   manager_id?: string;
   balance: number;
