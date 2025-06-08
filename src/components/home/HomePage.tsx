@@ -1,5 +1,5 @@
-
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,10 +9,28 @@ import { NewsBanner } from './NewsBanner';
 import { FloatingElements } from './FloatingElements';
 import { CandlestickPattern } from './CandlestickPattern';
 import { AnimatedChart } from './AnimatedChart';
-import { TrendingUp, TrendingDown, BarChart3, Shield, Users, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, Shield, Users, Zap, Menu, X } from 'lucide-react';
 
 export function HomePage() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleGetStarted = () => {
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
+
+  const handleTradingAccess = () => {
+    if (user) {
+      navigate('/trading');
+    } else {
+      navigate('/auth');
+    }
+  };
 
   const features = [
     {
@@ -44,6 +62,13 @@ export function HomePage() {
     { label: 'Países Atendidos', value: '150+', positive: true }
   ];
 
+  const navItems = [
+    { label: 'Início', href: '#home' },
+    { label: 'Recursos', href: '#features' },
+    { label: 'Sobre', href: '#about' },
+    { label: 'Contato', href: '#contact' }
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 relative overflow-hidden">
       {/* Floating Background Elements */}
@@ -58,6 +83,7 @@ export function HomePage() {
       <header className="bg-white/90 backdrop-blur-lg border-b shadow-sm sticky top-0 z-50 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
+            {/* Logo */}
             <div className="flex items-center">
               <div className="relative">
                 <BarChart3 className="h-8 w-8 text-blue-600 mr-3 animate-pulse" />
@@ -67,22 +93,94 @@ export function HomePage() {
                 InvestPro
               </h1>
             </div>
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center space-x-6">
+              {navItems.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            {/* User Menu */}
             <div className="flex items-center space-x-4">
-              {user && (
+              {user ? (
                 <>
-                  <span className="text-sm text-gray-700">
+                  <span className="hidden md:block text-sm text-gray-700">
                     Olá, {user.full_name || user.email}
                   </span>
                   <Badge variant={user.role === 'manager' ? 'default' : 'secondary'} className="animate-bounce">
                     {user.role}
                   </Badge>
-                  <Button variant="outline" size="sm" onClick={signOut} className="hover:scale-105 transition-transform">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigate('/dashboard')}
+                    className="hover:scale-105 transition-transform"
+                  >
+                    Dashboard
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={signOut} 
+                    className="hover:scale-105 transition-transform"
+                  >
                     Sair
                   </Button>
                 </>
+              ) : (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigate('/auth')}
+                    className="hover:scale-105 transition-transform"
+                  >
+                    Entrar
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => navigate('/auth')}
+                    className="hover:scale-105 transition-transform"
+                  >
+                    Cadastrar
+                  </Button>
+                </>
               )}
+              
+              {/* Mobile menu button */}
+              <button
+                className="md:hidden p-2"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
             </div>
           </div>
+
+          {/* Mobile Navigation */}
+          {mobileMenuOpen && (
+            <div className="md:hidden py-4 border-t">
+              <nav className="flex flex-col space-y-2">
+                {navItems.map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    className="text-gray-600 hover:text-blue-600 transition-colors py-2"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </nav>
+            </div>
+          )}
         </div>
       </header>
 
@@ -92,7 +190,7 @@ export function HomePage() {
       </div>
 
       {/* Hero Section */}
-      <section className="py-20 relative z-10">
+      <section id="home" className="py-20 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="animate-fade-in">
             <h1 className="text-5xl font-bold text-gray-900 mb-6">
@@ -103,11 +201,20 @@ export function HomePage() {
               análise em tempo real e gestão profissional de portfólio.
             </p>
             <div className="flex justify-center space-x-4">
-              <Button size="lg" className="px-8 py-3 hover:scale-105 transition-transform animate-bounce">
-                Começar a Investir
+              <Button 
+                size="lg" 
+                className="px-8 py-3 hover:scale-105 transition-transform animate-bounce"
+                onClick={handleGetStarted}
+              >
+                {user ? 'Ir para Dashboard' : 'Começar a Investir'}
               </Button>
-              <Button variant="outline" size="lg" className="px-8 py-3 hover:scale-105 transition-transform">
-                Ver Demo
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="px-8 py-3 hover:scale-105 transition-transform"
+                onClick={handleTradingAccess}
+              >
+                {user ? 'Plataforma de Trading' : 'Ver Demo'}
               </Button>
             </div>
           </div>
@@ -134,7 +241,7 @@ export function HomePage() {
       </div>
 
       {/* Features Section */}
-      <section className="py-20 relative z-10">
+      <section id="features" className="py-20 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -178,8 +285,13 @@ export function HomePage() {
             <p className="text-xl text-blue-100 mb-8">
               Junte-se a milhares de investidores que já confiam em nossa plataforma
             </p>
-            <Button size="lg" variant="secondary" className="px-8 py-3 hover:scale-110 transition-transform animate-bounce">
-              Criar Conta Gratuita
+            <Button 
+              size="lg" 
+              variant="secondary" 
+              className="px-8 py-3 hover:scale-110 transition-transform animate-bounce"
+              onClick={handleGetStarted}
+            >
+              {user ? 'Acessar Plataforma' : 'Criar Conta Gratuita'}
             </Button>
           </div>
         </div>
