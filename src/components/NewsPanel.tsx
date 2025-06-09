@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Newspaper, ExternalLink, Clock, RefreshCw, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useRealNews } from '@/hooks/useRealNews';
+import { cn } from '@/lib/utils';
 
 export const NewsPanel = () => {
   const [selectedCategory, setSelectedCategory] = useState('business');

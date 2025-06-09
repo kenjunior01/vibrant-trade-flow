@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
@@ -9,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, BarChart3, Activity, RefreshCw } from 'lucide-react';
 import { useRealMarketData } from '@/hooks/useRealMarketData';
 import { useHistoricalData } from '@/hooks/useHistoricalData';
+import { cn } from '@/lib/utils';
 
 interface CandleData {
   timestamp: string;
