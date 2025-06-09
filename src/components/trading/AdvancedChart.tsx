@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, BarChart3, Activity } from 'lucide-react';
-import { useTradingAPI } from '@/hooks/useTradingAPI';
+import { TrendingUp, TrendingDown, BarChart3, Activity, RefreshCw } from 'lucide-react';
+import { useRealMarketData } from '@/hooks/useRealMarketData';
+import { useHistoricalData } from '@/hooks/useHistoricalData';
 
 interface CandleData {
   timestamp: string;
@@ -42,12 +43,12 @@ const chartConfig = {
 
 export function AdvancedChart() {
   const [symbol, setSymbol] = useState('EURUSD');
-  const [timeframe, setTimeframe] = useState('1H');
-  const [chartData, setChartData] = useState<CandleData[]>([]);
+  const [timeframe, setTimeframe] = useState('daily');
+  const [period, setPeriod] = useState('1month');
   const [showIndicators, setShowIndicators] = useState(true);
-  const [currentPrice, setCurrentPrice] = useState(0);
-  const [priceChange, setPriceChange] = useState(0);
-  const { getMarketData, loading } = useTradingAPI();
+  
+  const { data: currentData, loading: priceLoading } = useRealMarketData(symbol);
+  const { data: historicalData, loading: historyLoading, refetch } = useHistoricalData(symbol, timeframe, period);
 
   const symbols = [
     { value: 'EURUSD', label: 'EUR/USD' },
@@ -58,60 +59,50 @@ export function AdvancedChart() {
     { value: 'GOOGL', label: 'Google' },
   ];
 
-  const timeframes = ['1M', '5M', '15M', '1H', '4H', '1D'];
+  const timeframes = [
+    { value: 'daily', label: '1D' },
+    { value: '60min', label: '1H' },
+    { value: '15min', label: '15M' },
+    { value: '5min', label: '5M' }
+  ];
 
-  // Generate mock chart data with technical indicators
-  const generateChartData = () => {
-    const data: CandleData[] = [];
-    let price = symbol === 'BTCUSD' ? 43000 : symbol === 'ETHUSD' ? 2650 : 1.0856;
-    
-    for (let i = 0; i < 100; i++) {
-      const timestamp = new Date(Date.now() - (100 - i) * 3600000).toISOString();
-      const volatility = price * 0.002;
-      const change = (Math.random() - 0.5) * volatility;
-      
-      const open = price;
-      const close = open + change;
-      const high = Math.max(open, close) + Math.random() * volatility * 0.5;
-      const low = Math.min(open, close) - Math.random() * volatility * 0.5;
-      const volume = Math.random() * 1000000 + 500000;
+  const periods = [
+    { value: '1week', label: '1W' },
+    { value: '1month', label: '1M' },
+    { value: '3months', label: '3M' },
+    { value: '6months', label: '6M' },
+    { value: '1year', label: '1Y' }
+  ];
 
-      data.push({
-        timestamp,
-        open: Number(open.toFixed(4)),
-        high: Number(high.toFixed(4)),
-        low: Number(low.toFixed(4)),
-        close: Number(close.toFixed(4)),
-        volume: Math.round(volume),
-      });
+  // Calculate technical indicators
+  const calculateIndicators = (data: any[]): CandleData[] => {
+    if (!data || data.length === 0) return [];
 
-      price = close;
-    }
-
-    // Calculate technical indicators
     return data.map((candle, index) => {
+      // SMA 20
       const sma20 = index >= 19 
         ? data.slice(index - 19, index + 1).reduce((sum, c) => sum + c.close, 0) / 20
         : undefined;
 
+      // EMA 12
       const ema12 = index >= 11
         ? calculateEMA(data.slice(0, index + 1).map(c => c.close), 12)[index]
         : undefined;
 
+      // RSI 14
       const rsi = index >= 13
         ? calculateRSI(data.slice(0, index + 1).map(c => c.close), 14)
         : undefined;
 
       return {
         ...candle,
-        sma20: sma20 ? Number(sma20.toFixed(4)) : undefined,
-        ema12: ema12 ? Number(ema12.toFixed(4)) : undefined,
+        sma20: sma20 ? Number(sma20.toFixed(5)) : undefined,
+        ema12: ema12 ? Number(ema12.toFixed(5)) : undefined,
         rsi: rsi ? Number(rsi.toFixed(2)) : undefined,
       };
     });
   };
 
-  // Calculate EMA
   const calculateEMA = (prices: number[], period: number): number[] => {
     const ema: number[] = [];
     const multiplier = 2 / (period + 1);
@@ -124,7 +115,6 @@ export function AdvancedChart() {
     return ema;
   };
 
-  // Calculate RSI
   const calculateRSI = (prices: number[], period: number): number => {
     const changes = [];
     for (let i = 1; i < prices.length; i++) {
@@ -142,66 +132,9 @@ export function AdvancedChart() {
     return 100 - (100 / (1 + rs));
   };
 
-  useEffect(() => {
-    const data = generateChartData();
-    setChartData(data);
-    
-    if (data.length > 0) {
-      const latest = data[data.length - 1];
-      const previous = data[data.length - 2];
-      setCurrentPrice(latest.close);
-      setPriceChange(latest.close - previous.close);
-    }
-  }, [symbol, timeframe]);
-
-  // Fetch real market data
-  useEffect(() => {
-    const fetchData = async () => {
-      const marketData = await getMarketData(symbol);
-      if (marketData) {
-        setCurrentPrice(marketData.price);
-        setPriceChange(marketData.change);
-      }
-    };
-
-    fetchData();
-    const interval = setInterval(fetchData, 30000); // Update every 30 seconds
-    return () => clearInterval(interval);
-  }, [symbol]);
-
-  const CustomCandlestick = (props: any) => {
-    const { payload, x, y, width, height } = props;
-    if (!payload) return null;
-
-    const { open, high, low, close } = payload;
-    const isGreen = close > open;
-    const color = isGreen ? '#10b981' : '#ef4444';
-    
-    const bodyHeight = Math.abs(close - open) * height / (payload.high - payload.low);
-    const bodyY = y + (Math.max(high - Math.max(open, close), 0) * height / (high - low));
-
-    return (
-      <g>
-        {/* Wick */}
-        <line
-          x1={x + width / 2}
-          y1={y}
-          x2={x + width / 2}
-          y2={y + height}
-          stroke={color}
-          strokeWidth={1}
-        />
-        {/* Body */}
-        <rect
-          x={x + width * 0.2}
-          y={bodyY}
-          width={width * 0.6}
-          height={Math.max(bodyHeight, 1)}
-          fill={color}
-        />
-      </g>
-    );
-  };
+  const chartData = calculateIndicators(historicalData);
+  const currentPrice = currentData?.price || 0;
+  const priceChange = currentData?.change || 0;
 
   return (
     <Card>
@@ -210,7 +143,12 @@ export function AdvancedChart() {
           <div className="flex items-center space-x-4">
             <CardTitle className="flex items-center">
               <BarChart3 className="h-5 w-5 mr-2" />
-              Advanced Chart
+              Real Chart
+              {currentData?.source && (
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {currentData.source}
+                </Badge>
+              )}
             </CardTitle>
             
             <Select value={symbol} onValueChange={setSymbol}>
@@ -226,45 +164,68 @@ export function AdvancedChart() {
               </SelectContent>
             </Select>
 
-            <div className="flex space-x-1">
-              {timeframes.map(tf => (
-                <Button
-                  key={tf}
-                  variant={timeframe === tf ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTimeframe(tf)}
-                >
-                  {tf}
-                </Button>
-              ))}
-            </div>
+            <Select value={timeframe} onValueChange={setTimeframe}>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {timeframes.map(tf => (
+                  <SelectItem key={tf.value} value={tf.value}>
+                    {tf.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {periods.map(p => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowIndicators(!showIndicators)}
-          >
-            <Activity className="h-4 w-4 mr-2" />
-            Indicators
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refetch}
+              disabled={historyLoading}
+            >
+              <RefreshCw className={cn("h-4 w-4", historyLoading && "animate-spin")} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowIndicators(!showIndicators)}
+            >
+              <Activity className="h-4 w-4 mr-2" />
+              Indicators
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <span className="text-2xl font-bold">{currentPrice.toFixed(4)}</span>
+            <span className="text-2xl font-bold">{currentPrice.toFixed(5)}</span>
             <Badge variant={priceChange >= 0 ? "default" : "destructive"} className="flex items-center">
               {priceChange >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-              {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(4)}
+              {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(5)}
             </Badge>
           </div>
           
           {chartData.length > 0 && (
             <div className="flex space-x-4 text-sm text-muted-foreground">
-              <span>O: {chartData[chartData.length - 1]?.open.toFixed(4)}</span>
-              <span>H: {chartData[chartData.length - 1]?.high.toFixed(4)}</span>
-              <span>L: {chartData[chartData.length - 1]?.low.toFixed(4)}</span>
-              <span>C: {chartData[chartData.length - 1]?.close.toFixed(4)}</span>
+              <span>O: {chartData[chartData.length - 1]?.open.toFixed(5)}</span>
+              <span>H: {chartData[chartData.length - 1]?.high.toFixed(5)}</span>
+              <span>L: {chartData[chartData.length - 1]?.low.toFixed(5)}</span>
+              <span>C: {chartData[chartData.length - 1]?.close.toFixed(5)}</span>
               {chartData[chartData.length - 1]?.rsi && (
                 <span>RSI: {chartData[chartData.length - 1]?.rsi}</span>
               )}
@@ -274,47 +235,61 @@ export function AdvancedChart() {
       </CardHeader>
       
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis 
-                dataKey="timestamp" 
-                tickFormatter={(value) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              />
-              <YAxis domain={['dataMin - 0.001', 'dataMax + 0.001']} />
-              <Tooltip 
-                labelFormatter={(value) => new Date(value).toLocaleString()}
-                formatter={(value: any, name: string) => [value, name]}
-              />
-              
-              {/* Candlestick bodies */}
-              <Bar dataKey="close" shape={<CustomCandlestick />} />
-              
-              {/* Technical indicators */}
-              {showIndicators && (
-                <>
-                  <Line 
-                    type="monotone" 
-                    dataKey="sma20" 
-                    stroke="var(--color-sma20)" 
-                    strokeWidth={1}
-                    dot={false}
-                    connectNulls={false}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="ema12" 
-                    stroke="var(--color-ema12)" 
-                    strokeWidth={1}
-                    dot={false}
-                    connectNulls={false}
-                  />
-                </>
-              )}
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartContainer>
+        {historyLoading ? (
+          <div className="h-[400px] flex items-center justify-center">
+            <div className="text-muted-foreground">Carregando dados históricos reais...</div>
+          </div>
+        ) : chartData.length === 0 ? (
+          <div className="h-[400px] flex items-center justify-center">
+            <div className="text-muted-foreground">Nenhum dado disponível</div>
+          </div>
+        ) : (
+          <ChartContainer config={chartConfig} className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis 
+                  dataKey="timestamp" 
+                  tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                />
+                <YAxis domain={['dataMin - 0.001', 'dataMax + 0.001']} />
+                <Tooltip 
+                  labelFormatter={(value) => new Date(value).toLocaleString()}
+                  formatter={(value: any, name: string) => [value, name]}
+                />
+                
+                <Line 
+                  type="monotone" 
+                  dataKey="close" 
+                  stroke="var(--color-close)" 
+                  strokeWidth={2}
+                  dot={false}
+                />
+                
+                {showIndicators && (
+                  <>
+                    <Line 
+                      type="monotone" 
+                      dataKey="sma20" 
+                      stroke="var(--color-sma20)" 
+                      strokeWidth={1}
+                      dot={false}
+                      connectNulls={false}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="ema12" 
+                      stroke="var(--color-ema12)" 
+                      strokeWidth={1}
+                      dot={false}
+                      connectNulls={false}
+                    />
+                  </>
+                )}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        )}
 
         {/* RSI Indicator */}
         {showIndicators && chartData.length > 0 && (
@@ -331,21 +306,6 @@ export function AdvancedChart() {
                     dataKey="rsi" 
                     stroke="#8884d8" 
                     strokeWidth={2}
-                    dot={false}
-                  />
-                  {/* RSI levels */}
-                  <Line 
-                    type="monotone" 
-                    dataKey={() => 70} 
-                    stroke="#ef4444" 
-                    strokeDasharray="5 5"
-                    dot={false}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey={() => 30} 
-                    stroke="#10b981" 
-                    strokeDasharray="5 5"
                     dot={false}
                   />
                 </ComposedChart>

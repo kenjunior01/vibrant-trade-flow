@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useTradingAPI } from './useTradingAPI';
+import { useRealMarketData } from './useRealMarketData';
 
 interface MarketDataHook {
   price: number;
@@ -11,9 +11,11 @@ interface MarketDataHook {
   low24h: number;
   isLoading: boolean;
   lastUpdate: Date | null;
+  source?: string;
 }
 
-export function useMarketData(symbol: string, updateInterval: number = 30000) {
+export function useMarketData(symbol: string, updateInterval: number = 30000): MarketDataHook {
+  const { data: realData, loading, error } = useRealMarketData(symbol, updateInterval);
   const [marketData, setMarketData] = useState<MarketDataHook>({
     price: 0,
     change: 0,
@@ -25,46 +27,25 @@ export function useMarketData(symbol: string, updateInterval: number = 30000) {
     lastUpdate: null,
   });
 
-  const { getMarketData } = useTradingAPI();
-
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    const fetchData = async () => {
-      try {
-        const data = await getMarketData(symbol);
-        if (data) {
-          setMarketData(prev => ({
-            price: data.price,
-            change: data.change,
-            changePercent: data.changePercent,
-            volume: data.volume,
-            high24h: prev.high24h || data.price * 1.02, // Mock 24h high
-            low24h: prev.low24h || data.price * 0.98, // Mock 24h low
-            isLoading: false,
-            lastUpdate: new Date(),
-          }));
-        }
-      } catch (error) {
-        console.error('Error fetching market data:', error);
-        setMarketData(prev => ({ ...prev, isLoading: false }));
-      }
-    };
-
-    // Initial fetch
-    fetchData();
-
-    // Set up interval for updates
-    if (updateInterval > 0) {
-      interval = setInterval(fetchData, updateInterval);
+    if (realData) {
+      setMarketData({
+        price: realData.price,
+        change: realData.change,
+        changePercent: realData.changePercent,
+        volume: realData.volume,
+        high24h: realData.price * 1.02, // Approximate 24h high
+        low24h: realData.price * 0.98,  // Approximate 24h low
+        isLoading: false,
+        lastUpdate: new Date(realData.timestamp),
+        source: realData.source
+      });
+    } else if (loading) {
+      setMarketData(prev => ({ ...prev, isLoading: true }));
+    } else if (error) {
+      setMarketData(prev => ({ ...prev, isLoading: false }));
     }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [symbol, updateInterval, getMarketData]);
+  }, [realData, loading, error]);
 
   return marketData;
 }

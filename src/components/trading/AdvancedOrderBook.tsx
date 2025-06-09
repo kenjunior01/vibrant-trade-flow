@@ -1,98 +1,27 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BookOpen, TrendingUp, TrendingDown } from 'lucide-react';
+import { BookOpen, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface OrderBookEntry {
-  price: number;
-  size: number;
-  total: number;
-}
-
-interface OrderBookData {
-  bids: OrderBookEntry[];
-  asks: OrderBookEntry[];
-  spread: number;
-  lastPrice: number;
-}
+import { useRealOrderBook } from '@/hooks/useRealOrderBook';
 
 export function AdvancedOrderBook() {
-  const [orderBook, setOrderBook] = useState<OrderBookData>({
-    bids: [],
-    asks: [],
-    spread: 0,
-    lastPrice: 1.0856
-  });
-  const [maxSize, setMaxSize] = useState(0);
-
-  // Generate mock order book data
-  const generateOrderBook = () => {
-    const basePrice = 1.0856;
-    const spread = 0.0002;
-    
-    const bids: OrderBookEntry[] = [];
-    const asks: OrderBookEntry[] = [];
-    
-    let totalBids = 0;
-    let totalAsks = 0;
-    
-    // Generate bids (buy orders)
-    for (let i = 0; i < 10; i++) {
-      const price = basePrice - spread/2 - (i * 0.0001);
-      const size = Math.random() * 1000000 + 100000;
-      totalBids += size;
-      
-      bids.push({
-        price: Number(price.toFixed(5)),
-        size: Math.round(size),
-        total: Math.round(totalBids)
-      });
-    }
-    
-    // Generate asks (sell orders)
-    for (let i = 0; i < 10; i++) {
-      const price = basePrice + spread/2 + (i * 0.0001);
-      const size = Math.random() * 1000000 + 100000;
-      totalAsks += size;
-      
-      asks.push({
-        price: Number(price.toFixed(5)),
-        size: Math.round(size),
-        total: Math.round(totalAsks)
-      });
-    }
-    
-    const allSizes = [...bids, ...asks].map(entry => entry.size);
-    const maxOrderSize = Math.max(...allSizes);
-    
-    setMaxSize(maxOrderSize);
-    setOrderBook({
-      bids: bids.reverse(), // Show highest bids first
-      asks,
-      spread: Number(spread.toFixed(5)),
-      lastPrice: basePrice
-    });
-  };
-
-  useEffect(() => {
-    generateOrderBook();
-    const interval = setInterval(generateOrderBook, 2000); // Update every 2 seconds
-    return () => clearInterval(interval);
-  }, []);
+  const { orderBook, loading, refetch } = useRealOrderBook('EURUSD', 5000);
 
   const OrderRow = ({ 
     entry, 
     type, 
-    onClick 
+    onClick,
+    maxSize
   }: { 
-    entry: OrderBookEntry; 
+    entry: any; 
     type: 'bid' | 'ask'; 
     onClick: (price: number, size: number) => void;
+    maxSize: number;
   }) => {
-    const percentage = (entry.size / maxSize) * 100;
+    const percentage = maxSize > 0 ? (entry.size / maxSize) * 100 : 0;
     
     return (
       <div
@@ -102,7 +31,6 @@ export function AdvancedOrderBook() {
         )}
         onClick={() => onClick(entry.price, entry.size)}
       >
-        {/* Background bar showing relative size */}
         <div
           className={cn(
             "absolute inset-0 opacity-20",
@@ -111,17 +39,21 @@ export function AdvancedOrderBook() {
           style={{ width: `${percentage}%` }}
         />
         
-        <div className="text-right font-mono">{entry.price}</div>
-        <div className="text-right font-mono">{entry.size.toLocaleString()}</div>
-        <div className="text-right font-mono text-muted-foreground">{entry.total.toLocaleString()}</div>
+        <div className="text-right font-mono relative z-10">{entry.price.toFixed(5)}</div>
+        <div className="text-right font-mono relative z-10">{entry.size.toLocaleString()}</div>
+        <div className="text-right font-mono text-muted-foreground relative z-10">{entry.total.toLocaleString()}</div>
       </div>
     );
   };
 
   const handleOrderClick = (price: number, size: number) => {
     console.log(`Clicked order: ${price} @ ${size}`);
-    // In a real app, this would populate the order form
   };
+
+  const maxSize = Math.max(
+    ...orderBook.bids.map(b => b.size), 
+    ...orderBook.asks.map(a => a.size)
+  );
 
   return (
     <Card>
@@ -129,15 +61,27 @@ export function AdvancedOrderBook() {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center">
             <BookOpen className="h-5 w-5 mr-2" />
-            Order Book
+            Order Book {orderBook.source && (
+              <Badge variant="outline" className="ml-2 text-xs">
+                {orderBook.source}
+              </Badge>
+            )}
           </CardTitle>
           
           <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refetch}
+              disabled={loading}
+            >
+              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            </Button>
             <Badge variant="outline" className="font-mono">
-              Spread: {orderBook.spread}
+              Spread: {orderBook.spread.toFixed(5)}
             </Badge>
             <Badge variant="secondary" className="font-mono">
-              {orderBook.lastPrice}
+              {orderBook.lastPrice.toFixed(5)}
             </Badge>
           </div>
         </div>
@@ -151,38 +95,48 @@ export function AdvancedOrderBook() {
           <div className="text-right">Total</div>
         </div>
         
-        {/* Asks (Sell Orders) */}
-        <div className="space-y-0">
-          {orderBook.asks.slice().reverse().map((ask, index) => (
-            <OrderRow
-              key={`ask-${index}`}
-              entry={ask}
-              type="ask"
-              onClick={handleOrderClick}
-            />
-          ))}
-        </div>
-        
-        {/* Spread indicator */}
-        <div className="flex items-center justify-center py-3 border-y bg-muted/20">
-          <div className="flex items-center space-x-2 text-sm">
-            <TrendingUp className="h-4 w-4 text-green-600" />
-            <span className="font-mono font-semibold">{orderBook.lastPrice}</span>
-            <TrendingDown className="h-4 w-4 text-red-600" />
+        {loading ? (
+          <div className="p-4 text-center text-muted-foreground">
+            Carregando dados reais...
           </div>
-        </div>
-        
-        {/* Bids (Buy Orders) */}
-        <div className="space-y-0">
-          {orderBook.bids.map((bid, index) => (
-            <OrderRow
-              key={`bid-${index}`}
-              entry={bid}
-              type="bid"
-              onClick={handleOrderClick}
-            />
-          ))}
-        </div>
+        ) : (
+          <>
+            {/* Asks (Sell Orders) */}
+            <div className="space-y-0">
+              {orderBook.asks.slice().reverse().map((ask, index) => (
+                <OrderRow
+                  key={`ask-${index}`}
+                  entry={ask}
+                  type="ask"
+                  onClick={handleOrderClick}
+                  maxSize={maxSize}
+                />
+              ))}
+            </div>
+            
+            {/* Spread indicator */}
+            <div className="flex items-center justify-center py-3 border-y bg-muted/20">
+              <div className="flex items-center space-x-2 text-sm">
+                <TrendingUp className="h-4 w-4 text-green-600" />
+                <span className="font-mono font-semibold">{orderBook.lastPrice.toFixed(5)}</span>
+                <TrendingDown className="h-4 w-4 text-red-600" />
+              </div>
+            </div>
+            
+            {/* Bids (Buy Orders) */}
+            <div className="space-y-0">
+              {orderBook.bids.map((bid, index) => (
+                <OrderRow
+                  key={`bid-${index}`}
+                  entry={bid}
+                  type="bid"
+                  onClick={handleOrderClick}
+                  maxSize={maxSize}
+                />
+              ))}
+            </div>
+          </>
+        )}
         
         {/* Quick actions */}
         <div className="flex space-x-2 p-3 border-t">
