@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useWallets } from '@/hooks/useWallets';
@@ -11,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react';
+import { FlaskMarketTicker } from './FlaskMarketTicker';
+import { FlaskNewsPanel } from './FlaskNewsPanel';
 
 export function NewTradingPlatform() {
   const { user, signOut } = useAuth();
@@ -39,7 +40,7 @@ export function NewTradingPlatform() {
         open_price: orderType === 'market' ? 50000 : parseFloat(price), // Mock price
         leverage: parseInt(leverage),
         status: 'open',
-        pnl: 0, // Add missing pnl property
+        pnl: 0,
         close_price: undefined,
         closed_at: undefined,
       });
@@ -77,107 +78,125 @@ export function NewTradingPlatform() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Market Data Ticker */}
+        <div className="mb-8">
+          <FlaskMarketTicker />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Trading Panel */}
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Abrir Posição</CardTitle>
-                <CardDescription>
-                  Configure e execute suas operações
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="symbol">Ativo</Label>
-                    <Select value={symbol} onValueChange={setSymbol}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BTCUSDT">BTC/USDT</SelectItem>
-                        <SelectItem value="ETHUSDT">ETH/USDT</SelectItem>
-                        <SelectItem value="ADAUSDT">ADA/USDT</SelectItem>
-                        <SelectItem value="SOLUSDT">SOL/USDT</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="orderType">Tipo de Ordem</Label>
-                    <Select value={orderType} onValueChange={(value: 'market' | 'limit') => setOrderType(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="market">Mercado</SelectItem>
-                        <SelectItem value="limit">Limite</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+            <Tabs defaultValue="trading" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="trading">Trading</TabsTrigger>
+                <TabsTrigger value="news">Notícias</TabsTrigger>
+              </TabsList>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="amount">Quantidade</Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="leverage">Alavancagem</Label>
-                    <Select value={leverage} onValueChange={setLeverage}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1x</SelectItem>
-                        <SelectItem value="2">2x</SelectItem>
-                        <SelectItem value="5">5x</SelectItem>
-                        <SelectItem value="10">10x</SelectItem>
-                        <SelectItem value="20">20x</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              <TabsContent value="trading">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Abrir Posição</CardTitle>
+                    <CardDescription>
+                      Configure e execute suas operações
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="symbol">Ativo</Label>
+                        <Select value={symbol} onValueChange={setSymbol}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="BTCUSDT">BTC/USDT</SelectItem>
+                            <SelectItem value="ETHUSDT">ETH/USDT</SelectItem>
+                            <SelectItem value="ADAUSDT">ADA/USDT</SelectItem>
+                            <SelectItem value="SOLUSDT">SOL/USDT</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="orderType">Tipo de Ordem</Label>
+                        <Select value={orderType} onValueChange={(value: 'market' | 'limit') => setOrderType(value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="market">Mercado</SelectItem>
+                            <SelectItem value="limit">Limite</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
 
-                {orderType === 'limit' && (
-                  <div>
-                    <Label htmlFor="price">Preço</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="amount">Quantidade</Label>
+                        <Input
+                          id="amount"
+                          type="number"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="leverage">Alavancagem</Label>
+                        <Select value={leverage} onValueChange={setLeverage}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1x</SelectItem>
+                            <SelectItem value="2">2x</SelectItem>
+                            <SelectItem value="5">5x</SelectItem>
+                            <SelectItem value="10">10x</SelectItem>
+                            <SelectItem value="20">20x</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
 
-                <div className="flex space-x-4">
-                  <Button
-                    onClick={() => handleOpenPosition('long')}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                    disabled={!amount}
-                  >
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    Comprar (Long)
-                  </Button>
-                  <Button
-                    onClick={() => handleOpenPosition('short')}
-                    className="flex-1 bg-red-600 hover:bg-red-700"
-                    disabled={!amount}
-                  >
-                    <TrendingDown className="h-4 w-4 mr-2" />
-                    Vender (Short)
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                    {orderType === 'limit' && (
+                      <div>
+                        <Label htmlFor="price">Preço</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex space-x-4">
+                      <Button
+                        onClick={() => handleOpenPosition('long')}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        disabled={!amount}
+                      >
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                        Comprar (Long)
+                      </Button>
+                      <Button
+                        onClick={() => handleOpenPosition('short')}
+                        className="flex-1 bg-red-600 hover:bg-red-700"
+                        disabled={!amount}
+                      >
+                        <TrendingDown className="h-4 w-4 mr-2" />
+                        Vender (Short)
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="news">
+                <FlaskNewsPanel />
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Portfolio Summary */}
@@ -209,7 +228,6 @@ export function NewTradingPlatform() {
               </CardContent>
             </Card>
 
-            {/* Open Positions */}
             <Card>
               <CardHeader>
                 <CardTitle>Posições Abertas</CardTitle>
