@@ -1,4 +1,3 @@
-
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -7,6 +6,8 @@ from flask_socketio import SocketIO
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from config import Config
+from celery import Celery
+from flask_celeryext import FlaskCeleryExt
 import os
 
 # Initialize extensions
@@ -15,6 +16,7 @@ login_manager = LoginManager()
 jwt = JWTManager()
 socketio = SocketIO(cors_allowed_origins="*")
 bcrypt = Bcrypt()
+celery_ext = FlaskCeleryExt()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -25,8 +27,10 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     jwt.init_app(app)
     socketio.init_app(app)
-    bcrypt.init_app(app)
-    
+    # Inicializa o Celery após o socketio
+    celery = Celery(__name__, broker=config_class.CELERY_BROKER_URL)
+    celery.conf.update(app.config)
+    celery.set_default()
     # Configure CORS
     CORS(app, origins=["http://localhost:5173", "http://localhost:3000"])
     
@@ -56,6 +60,9 @@ def create_app(config_class=Config):
         db.create_all()
     
     return app
+
+# Importa e registra tarefas Celery
+from tasks import monitor_automation_strategies
 
 if __name__ == '__main__':
     app = create_app()

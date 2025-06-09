@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 import requests
@@ -6,6 +5,10 @@ import os
 from datetime import datetime, timedelta
 import json
 from app import db
+import pandas as pd
+import pandas_ta as ta
+import redis
+from flask import current_app
 
 market_bp = Blueprint('market', __name__)
 
@@ -14,37 +17,29 @@ ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
 FINNHUB_BASE_URL = "https://finnhub.io/api/v1"
 COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
 
-# Cache for market data (in production, use Redis)
-market_cache = {}
-CACHE_DURATION = 60  # seconds
+def get_redis_client():
+    redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
+    return redis.Redis.from_url(redis_url, decode_responses=True)
 
 def get_alpha_vantage_data(symbol, function="GLOBAL_QUOTE"):
     """Get data from Alpha Vantage API"""
     api_key = os.environ.get('ALPHA_VANTAGE_API_KEY')
     if not api_key:
         return None
-    
     cache_key = f"av_{function}_{symbol}"
-    now = datetime.now()
-    
-    # Check cache
-    if cache_key in market_cache:
-        cache_data, timestamp = market_cache[cache_key]
-        if (now - timestamp).seconds < CACHE_DURATION:
-            return cache_data
-    
+    redis_client = get_redis_client()
+    cached = redis_client.get(cache_key)
+    if cached:
+        return json.loads(cached)
     params = {
         'function': function,
         'symbol': symbol,
         'apikey': api_key
     }
-    
     try:
         response = requests.get(ALPHA_VANTAGE_BASE_URL, params=params, timeout=10)
         data = response.json()
-        
-        # Cache the data
-        market_cache[cache_key] = (data, now)
+        redis_client.setex(cache_key, 60, json.dumps(data))
         return data
     except Exception as e:
         print(f"Alpha Vantage API error: {e}")
@@ -55,25 +50,16 @@ def get_finnhub_data(symbol):
     api_key = os.environ.get('FINNHUB_API_KEY')
     if not api_key:
         return None
-    
     cache_key = f"fh_{symbol}"
-    now = datetime.now()
-    
-    # Check cache
-    if cache_key in market_cache:
-        cache_data, timestamp = market_cache[cache_key]
-        if (now - timestamp).seconds < CACHE_DURATION:
-            return cache_data
-    
+    redis_client = get_redis_client()
+    cached = redis_client.get(cache_key)
+    if cached:
+        return json.loads(cached)
     headers = {'X-Finnhub-Token': api_key}
-    
     try:
-        response = requests.get(f"{FINNHUB_BASE_URL}/quote?symbol={symbol}", 
-                              headers=headers, timeout=10)
+        response = requests.get(f"{FINNHUB_BASE_URL}/quote?symbol={symbol}", headers=headers, timeout=10)
         data = response.json()
-        
-        # Cache the data
-        market_cache[cache_key] = (data, now)
+        redis_client.setex(cache_key, 60, json.dumps(data))
         return data
     except Exception as e:
         print(f"Finnhub API error: {e}")
@@ -82,27 +68,19 @@ def get_finnhub_data(symbol):
 def get_coingecko_data(ids):
     """Get cryptocurrency data from CoinGecko API"""
     cache_key = f"cg_{ids}"
-    now = datetime.now()
-    
-    # Check cache
-    if cache_key in market_cache:
-        cache_data, timestamp = market_cache[cache_key]
-        if (now - timestamp).seconds < CACHE_DURATION:
-            return cache_data
-    
+    redis_client = get_redis_client()
+    cached = redis_client.get(cache_key)
+    if cached:
+        return json.loads(cached)
     params = {
         'ids': ids,
         'vs_currencies': 'usd',
         'include_24hr_change': 'true'
     }
-    
     try:
-        response = requests.get(f"{COINGECKO_BASE_URL}/simple/price", 
-                              params=params, timeout=10)
+        response = requests.get(f"{COINGECKO_BASE_URL}/simple/price", params=params, timeout=10)
         data = response.json()
-        
-        # Cache the data
-        market_cache[cache_key] = (data, now)
+        redis_client.setex(cache_key, 60, json.dumps(data))
         return data
     except Exception as e:
         print(f"CoinGecko API error: {e}")
@@ -224,10 +202,44 @@ def get_chart_data(symbol):
                 'volume': int(values['5. volume']) if '5. volume' in values else 0
             })
         
+        # Calcula indicadores técnicos usando pandas_ta
+        df = pd.DataFrame(chart_data)
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df = df.sort_values('timestamp')
+        df.set_index('timestamp', inplace=True)
+        # RSI
+        df['rsi'] = ta.rsi(df['close'], length=14)
+        # MACD
+        macd = ta.macd(df['close'])
+        df['macd'] = macd['MACD_12_26_9']
+        df['macd_signal'] = macd['MACDs_12_26_9']
+        df['macd_hist'] = macd['MACDh_12_26_9']
+        # SMA
+        df['sma20'] = ta.sma(df['close'], length=20)
+        df['sma50'] = ta.sma(df['close'], length=50)
+        
+        # Prepara resposta
+        chart_data_out = []
+        for idx, row in df.iterrows():
+            chart_data_out.append({
+                'timestamp': idx.strftime('%Y-%m-%d'),
+                'open': round(row['open'], 4),
+                'high': round(row['high'], 4),
+                'low': round(row['low'], 4),
+                'close': round(row['close'], 4),
+                'volume': int(row['volume']),
+                'rsi': round(row['rsi'], 2) if pd.notnull(row['rsi']) else None,
+                'macd': round(row['macd'], 4) if pd.notnull(row['macd']) else None,
+                'macd_signal': round(row['macd_signal'], 4) if pd.notnull(row['macd_signal']) else None,
+                'macd_hist': round(row['macd_hist'], 4) if pd.notnull(row['macd_hist']) else None,
+                'sma20': round(row['sma20'], 4) if pd.notnull(row['sma20']) else None,
+                'sma50': round(row['sma50'], 4) if pd.notnull(row['sma50']) else None
+            })
+        
         return jsonify({
             'symbol': symbol,
             'interval': interval,
-            'data': chart_data
+            'data': chart_data_out
         }), 200
         
     except Exception as e:

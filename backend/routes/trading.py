@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
@@ -57,7 +56,7 @@ def get_orders():
         
         return jsonify({
             'orders': [order.to_dict() for order in orders]
-        }), 200
+        }, 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -82,6 +81,8 @@ def place_order():
         size = Decimal(str(data['size']))
         price = Decimal(str(data.get('price', 0))) if data.get('price') else None
         stop_price = Decimal(str(data.get('stop_price', 0))) if data.get('stop_price') else None
+        stop_loss = Decimal(str(data.get('stop_loss'))) if data.get('stop_loss') else None
+        take_profit = Decimal(str(data.get('take_profit'))) if data.get('take_profit') else None
         
         # Validate inputs
         if side not in ['buy', 'sell']:
@@ -194,8 +195,11 @@ def execute_market_order(user_id, wallet, symbol, side, size):
                 symbol=symbol,
                 side=side,
                 size=size,
-                entry_price=Decimal(str(market_price)),
-                current_price=Decimal(str(market_price))
+                entry_price=price if price else get_market_price(symbol),
+                current_price=price if price else get_market_price(symbol),
+                stop_loss=stop_loss,
+                take_profit=take_profit,
+                # ...outros campos...
             )
             db.session.add(position)
         
@@ -383,3 +387,13 @@ def get_performance():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+def update_position_pnl_and_price(position_id, new_price):
+    """Atualiza o preço atual e o PnL não realizado da posição."""
+    position = Position.query.get(position_id)
+    if not position or not position.is_open:
+        return False
+    position.current_price = new_price
+    position.unrealized_pnl = position.calculate_pnl()
+    db.session.commit()
+    return True

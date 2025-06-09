@@ -1,21 +1,43 @@
-
-import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import React, { useEffect, useState } from 'react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useAuth } from '@/hooks/useAuth';
 
 interface PerformanceChartProps {
   userType: string;
 }
 
 export const PerformanceChart: React.FC<PerformanceChartProps> = ({ userType }) => {
-  const data = [
-    { name: '1d', value: 100, profit: 0 },
-    { name: '7d', value: 105, profit: 500 },
-    { name: '14d', value: 108, profit: 800 },
-    { name: '21d', value: 103, profit: 300 },
-    { name: '28d', value: 112, profit: 1200 },
-    { name: '35d', value: 118, profit: 1800 },
-    { name: 'Hoje', value: 115, profit: 1500 }
-  ];
+  const { token } = useAuth();
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPerformance = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('http://localhost:5000/api/trading/performance', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Erro ao buscar performance');
+        const result = await res.json();
+        // Map backend data to chart format (example, adjust as needed)
+        if (result.performance && Array.isArray(result.performance.history)) {
+          setData(result.performance.history.map((item: any) => ({
+            name: item.label || item.date || '',
+            value: item.value,
+            profit: item.pnl || 0,
+          })));
+        } else {
+          setData([]);
+        }
+      } catch {
+        setData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) fetchPerformance();
+  }, [token]);
 
   return (
     <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">

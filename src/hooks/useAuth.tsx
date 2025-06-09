@@ -1,7 +1,4 @@
-
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types/trading';
 
 interface AuthContextType {
@@ -11,6 +8,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, userData: Partial<User>) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
+  token: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,121 +16,100 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchUserProfile(session.user);
-      }
+    // Tenta restaurar sessão do localStorage
+    const storedToken = localStorage.getItem('jwt_token');
+    if (storedToken) {
+      setToken(storedToken);
+      fetchUserProfile(storedToken);
+    } else {
       setLoading(false);
-    };
-
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        await fetchUserProfile(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    }
   }, []);
 
-  const fetchUserProfile = async (authUser: SupabaseUser) => {
+  const fetchUserProfile = async (jwt: string) => {
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
-
-      if (error) throw error;
-
-      if (profile) {
-        const userData: User = {
-          id: profile.id,
-          email: profile.email || authUser.email || '',
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url,
-          phone: profile.phone,
-          date_of_birth: profile.date_of_birth,
-          country: profile.country,
-          company: profile.company,
-          role: profile.role === 'super_admin' ? 'superadmin' : (profile.role === 'account_manager' ? 'manager' : profile.role),
-          experience_level: profile.experience_level,
-          risk_profile: profile.risk_profile,
-          manager_id: profile.manager_id,
-          balance: profile.balance || 0,
-          plan: profile.plan || 'free',
-          investment_goals: profile.investment_goals,
-          created_at: profile.created_at,
-          updated_at: profile.updated_at,
-        };
-        setUser(userData);
-      }
+      const res = await fetch('http://localhost:5000/api/auth/profile', {
+        headers: { 'Authorization': `Bearer ${jwt}` },
+      });
+      if (!res.ok) throw new Error('Erro ao buscar perfil');
+      const profile = await res.json();
+      setUser(profile);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      setUser(null);
+      localStorage.removeItem('jwt_token');
+      setToken(null);
+    } finally {
+      setLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) throw error;
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) throw new Error('Falha no login');
+      const { token: jwt } = await res.json();
+      setToken(jwt);
+      localStorage.setItem('jwt_token', jwt);
+      await fetchUserProfile(jwt);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signUp = async (email: string, password: string, userData: Partial<User>) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: userData.full_name,
-          role: userData.role || 'trader',
-          experience_level: userData.experience_level || 'beginner',
-          risk_profile: userData.risk_profile || 'medium',
-        },
-      },
-    });
-
-    if (error) throw error;
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, ...userData }),
+      });
+      if (!res.ok) throw new Error('Falha no cadastro');
+      const { token: jwt } = await res.json();
+      setToken(jwt);
+      localStorage.setItem('jwt_token', jwt);
+      await fetchUserProfile(jwt);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('jwt_token');
   };
 
   const updateProfile = async (updates: Partial<User>) => {
-    if (!user) throw new Error('No user logged in');
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: updates.full_name,
-        phone: updates.phone,
-        country: updates.country,
-        company: updates.company,
-        avatar_url: updates.avatar_url,
-        experience_level: updates.experience_level,
-        risk_profile: updates.risk_profile,
-        investment_goals: updates.investment_goals,
-      })
-      .eq('id', user.id);
-
-    if (error) throw error;
-
-    setUser(prev => prev ? { ...prev, ...updates } : null);
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error('Erro ao atualizar perfil');
+      const profile = await res.json();
+      setUser(profile);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, updateProfile, token }}>
       {children}
     </AuthContext.Provider>
   );
@@ -140,8 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth deve ser usado dentro de AuthProvider');
   return context;
 }

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Header } from '@/components/Header';
@@ -11,6 +10,7 @@ import { AutomationPanel } from '@/components/AutomationPanel';
 import { NewsPanel } from '@/components/NewsPanel';
 import { Chat } from '@/components/Chat';
 import { MarketTicker } from '@/components/MarketTicker';
+import { UserManagementPanel } from '@/components/admin/UserManagementPanel';
 
 export function DashboardPage() {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -57,6 +57,7 @@ export function DashboardPage() {
             {activeSection === 'automation' && userType === 'manager' && <AutomationPanel />}
             {activeSection === 'news' && <NewsPanel />}
             {activeSection === 'chat' && <Chat userType={userType} />}
+            {activeSection === 'users' && (userType === 'admin' || userType === 'superadmin') && <UserManagementPanel />}
           </main>
         </div>
       </div>

@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import {
   Carousel,
@@ -9,38 +9,17 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 
-interface AssetData {
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: string;
-}
-
 export function FinancialAssetsBanner() {
-  const [assets, setAssets] = useState<AssetData[]>([
-    { symbol: 'BTC/USD', name: 'Bitcoin', price: 43250.00, change: 1250.50, changePercent: 2.98, volume: '$2.1B' },
-    { symbol: 'ETH/USD', name: 'Ethereum', price: 2650.25, change: -45.75, changePercent: -1.70, volume: '$890M' },
-    { symbol: 'AAPL', name: 'Apple Inc.', price: 185.20, change: 2.80, changePercent: 1.54, volume: '$45M' },
-    { symbol: 'TSLA', name: 'Tesla Inc.', price: 248.50, change: -5.20, changePercent: -2.05, volume: '$28M' },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 142.80, change: 1.95, changePercent: 1.38, volume: '$32M' },
-    { symbol: 'EUR/USD', name: 'Euro/Dólar', price: 1.0856, change: 0.0024, changePercent: 0.22, volume: '$1.5B' },
-    { symbol: 'GBP/USD', name: 'Libra/Dólar', price: 1.2745, change: -0.0018, changePercent: -0.14, volume: '$890M' },
-    { symbol: 'GOLD', name: 'Ouro', price: 2034.50, change: 12.30, changePercent: 0.61, volume: '$650M' },
-  ]);
+  const [assets, setAssets] = useState([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAssets(prev => prev.map(asset => ({
-        ...asset,
-        price: asset.price + (Math.random() - 0.5) * (asset.price * 0.002),
-        change: (Math.random() - 0.5) * (asset.price * 0.003),
-        changePercent: (Math.random() - 0.5) * 3
-      })));
-    }, 3000);
-
-    return () => clearInterval(interval);
+    const socket = io('http://localhost:5000/market_data');
+    socket.on('market_quotes', (quotes) => {
+      setAssets(quotes);
+    });
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   return (

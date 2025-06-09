@@ -1,6 +1,4 @@
-
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Wallet } from '@/types/trading';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -8,24 +6,23 @@ import { useToast } from '@/hooks/use-toast';
 export function useWallets() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
+    if (user && token) {
       fetchWallets();
     }
-  }, [user]);
+  }, [user, token]);
 
   const fetchWallets = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('is_default', { ascending: false });
-
-      if (error) throw error;
+      const res = await fetch('http://localhost:5000/api/trading/wallet', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Erro ao carregar carteiras');
+      const data = await res.json();
       setWallets(data || []);
     } catch (error: any) {
       toast({
@@ -40,25 +37,21 @@ export function useWallets() {
 
   const createWallet = async (name: string, description?: string) => {
     try {
-      const { data, error } = await supabase
-        .from('wallets')
-        .insert({
-          user_id: user?.id,
-          name,
-          description,
-          is_default: wallets.length === 0,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      const res = await fetch('http://localhost:5000/api/trading/wallet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, description }),
+      });
+      if (!res.ok) throw new Error('Erro ao criar carteira');
+      const data = await res.json();
       setWallets([...wallets, data]);
       toast({
         title: "Sucesso",
         description: "Carteira criada com sucesso!",
       });
-
       return data;
     } catch (error: any) {
       toast({

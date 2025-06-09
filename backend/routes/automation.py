@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
@@ -75,7 +74,9 @@ def create_strategy():
             capital_allocation=data['capital_allocation'],
             stop_loss_pct=data.get('stop_loss_pct'),
             take_profit_pct=data.get('take_profit_pct'),
-            max_daily_loss=data.get('max_daily_loss')
+            max_daily_loss=data.get('max_daily_loss'),
+            start_date=data.get('start_date'),
+            end_date=data.get('end_date')
         )
         
         db.session.add(strategy)
@@ -109,6 +110,9 @@ def update_strategy(strategy_id):
             return jsonify({'error': 'Traders cannot modify strategies'}), 403
         
         data = request.get_json()
+        strategy = AutomationStrategy.query.get(strategy_id)
+        if not strategy:
+            return jsonify({'error': 'Strategy not found'}), 404
         
         # Update allowed fields
         updatable_fields = [
@@ -116,7 +120,7 @@ def update_strategy(strategy_id):
             'take_profit_pct', 'max_daily_loss', 'is_active'
         ]
         
-        for field in updatable_fields:
+        for field in ['name', 'symbol', 'strategy_type', 'parameters', 'capital_allocation', 'stop_loss_pct', 'take_profit_pct', 'max_daily_loss', 'start_date', 'end_date']:
             if field in data:
                 setattr(strategy, field, data[field])
         
@@ -259,7 +263,7 @@ def get_manager_clients():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@automation_bp.route('/performance/<strategy_id>', methods=['GET'])
+@automation_bp.route('/strategies/<strategy_id>/performance', methods=['GET'])
 @jwt_required()
 def get_strategy_performance(strategy_id):
     """Get performance metrics for a specific strategy"""
@@ -277,23 +281,16 @@ def get_strategy_performance(strategy_id):
             return jsonify({'error': 'Not authorized to view this strategy'}), 403
         
         # Mock performance data (in production, calculate from actual trades)
-        performance = {
-            'strategy_id': strategy_id,
-            'total_trades': 25,
-            'winning_trades': 18,
-            'losing_trades': 7,
-            'win_rate': 72.0,
-            'total_pnl': 1250.75,
-            'avg_trade_pnl': 50.03,
-            'max_drawdown': -125.50,
-            'profit_factor': 2.3,
-            'sharpe_ratio': 1.85,
-            'active_since': strategy.created_at.isoformat(),
-            'last_trade': '2024-01-08T14:30:00Z',
-            'status': 'active' if strategy.is_active else 'inactive'
-        }
+        from models import Position
+        positions = Position.query.filter_by(user_id=strategy.client_id, symbol=strategy.symbol).all()
+        total_pnl = sum([p.calculate_pnl() for p in positions])
+        num_trades = len(positions)
         
-        return jsonify({'performance': performance}), 200
+        return jsonify({
+            'total_pnl': total_pnl,
+            'num_trades': num_trades,
+            'positions': [p.to_dict() for p in positions]
+        }), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500

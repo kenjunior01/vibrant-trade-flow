@@ -1,6 +1,4 @@
-
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Position } from '@/types/trading';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -8,32 +6,28 @@ import { useToast } from '@/hooks/use-toast';
 export function usePositions() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
+    if (user && token) {
       fetchPositions();
     }
-  }, [user]);
+  }, [user, token]);
 
   const fetchPositions = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('positions')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('opened_at', { ascending: false });
-
-      if (error) throw error;
-      
-      const typedPositions = (data || []).map(pos => ({
+      const res = await fetch('http://localhost:5000/api/trading/positions', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Erro ao carregar posições');
+      const data = await res.json();
+      setPositions((data || []).map(pos => ({
         ...pos,
         type: pos.type as 'long' | 'short',
-        status: pos.status as 'open' | 'closed'
-      }));
-      
-      setPositions(typedPositions);
+        status: pos.status as 'open' | 'closed',
+      })));
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -47,30 +41,26 @@ export function usePositions() {
 
   const createPosition = async (positionData: Omit<Position, 'id' | 'user_id' | 'opened_at'>) => {
     try {
-      const { data, error } = await supabase
-        .from('positions')
-        .insert({
-          user_id: user?.id,
-          ...positionData,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Properly type the returned data
+      const res = await fetch('http://localhost:5000/api/trading/place-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(positionData),
+      });
+      if (!res.ok) throw new Error('Erro ao abrir posição');
+      const data = await res.json();
       const newPosition: Position = {
         ...data,
         type: data.type as 'long' | 'short',
-        status: data.status as 'open' | 'closed'
+        status: data.status as 'open' | 'closed',
       };
-
       setPositions([newPosition, ...positions]);
       toast({
         title: "Sucesso",
         description: "Posição aberta com sucesso!",
       });
-
       return newPosition;
     } catch (error: any) {
       toast({

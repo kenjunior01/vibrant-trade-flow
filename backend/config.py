@@ -1,4 +1,3 @@
-
 import os
 from datetime import timedelta
 
@@ -16,7 +15,7 @@ class Config:
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     
     # Redis for Celery and Caching
-    REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
+    REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
     
     # API Keys
     ALPHA_VANTAGE_API_KEY = os.environ.get('ALPHA_VANTAGE_API_KEY')

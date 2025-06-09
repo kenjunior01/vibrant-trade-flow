@@ -1,4 +1,3 @@
-
 from app import db, login_manager, bcrypt
 from flask_login import UserMixin
 from datetime import datetime
@@ -31,6 +30,13 @@ class OrderStatus(Enum):
     CANCELLED = "cancelled"
     REJECTED = "rejected"
 
+class ChatRoomType(Enum):
+    PUBLIC = "public"
+    SUPPORT = "support"
+    MANAGER = "manager"
+    PRIVATE = "private"
+    ADMIN = "admin"
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(str(user_id))
@@ -54,6 +60,9 @@ class User(UserMixin, db.Model):
     
     # Wallet relationship
     wallets = db.relationship('Wallet', backref='user', lazy=True, cascade='all, delete-orphan')
+    
+    # Chat messages relationship
+    chat_messages = db.relationship('ChatMessage', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
@@ -188,6 +197,8 @@ class AutomationStrategy(db.Model):
     max_daily_loss = db.Column(db.Numeric(15, 2), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    start_date = db.Column(db.DateTime, nullable=True)
+    end_date = db.Column(db.DateTime, nullable=True)
     
     manager = db.relationship('User', foreign_keys=[manager_id], backref='managed_strategies')
     client = db.relationship('User', foreign_keys=[client_id], backref='automation_strategies')
@@ -204,7 +215,9 @@ class AutomationStrategy(db.Model):
             'take_profit_pct': float(self.take_profit_pct) if self.take_profit_pct else None,
             'max_daily_loss': float(self.max_daily_loss) if self.max_daily_loss else None,
             'is_active': self.is_active,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
         }
 
 class NewsArticle(db.Model):
@@ -231,4 +244,48 @@ class NewsArticle(db.Model):
             'sentiment_label': self.sentiment_label,
             'published_at': self.published_at.isoformat(),
             'created_at': self.created_at.isoformat()
+        }
+
+class ChatRoom(db.Model):
+    __tablename__ = 'chat_rooms'
+    id = db.Column(db.String(64), primary_key=True)  # ex: 'general', 'support', 'manager_<id>'
+    name = db.Column(db.String(100), nullable=False)
+    type = db.Column(db.Enum(ChatRoomType), nullable=False, default=ChatRoomType.PUBLIC)
+    description = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    messages = db.relationship('ChatMessage', backref='room', lazy=True, cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'type': self.type.value,
+            'description': self.description,
+            'created_at': self.created_at.isoformat(),
+        }
+
+class ChatMessage(db.Model):
+    __tablename__ = 'chat_messages'
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    room_id = db.Column(db.String(64), db.ForeignKey('chat_rooms.id'), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    user_name = db.Column(db.String(100), nullable=False)
+    user_role = db.Column(db.String(20), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(20), default='text')  # text, system, etc
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    user = db.relationship('User', backref='chat_messages')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'room_id': self.room_id,
+            'user_id': self.user_id,
+            'user_name': self.user_name,
+            'user_role': self.user_role,
+            'message': self.message,
+            'type': self.type,
+            'timestamp': self.timestamp.isoformat(),
         }

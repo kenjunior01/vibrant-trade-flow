@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Bot, Plus, Settings, Play, Pause, Trash2 } from 'lucide-react';
 
@@ -8,10 +7,16 @@ export const AutomationPanel = () => {
     name: '',
     client: '',
     asset: 'EUR/USD',
-    allocation: 5,
-    stopLoss: 2,
-    takeProfit: 4,
-    type: 'market',
+    capitalAllocation: 5,
+    stopLossPct: 2,
+    takeProfitPct: 4,
+    maxDailyLoss: '',
+    strategyType: 'dca',
+    trailingStopDistance: '',
+    entryIndicator: '',
+    indicatorValue: '',
+    dcaFrequency: '',
+    rebalanceThreshold: '',
     startDate: '',
     endDate: ''
   });
@@ -27,7 +32,12 @@ export const AutomationPanel = () => {
       profit: '+$2,450.00',
       trades: 47,
       stopLoss: '2%',
-      takeProfit: '4%'
+      takeProfit: '4%',
+      trailingStopDistance: '0.5',
+      entryIndicator: 'RSI',
+      indicatorValue: 30,
+      dcaFrequency: 'daily',
+      rebalanceThreshold: '5%'
     },
     {
       id: 2,
@@ -39,7 +49,12 @@ export const AutomationPanel = () => {
       profit: '+$8,920.50',
       trades: 23,
       stopLoss: '5%',
-      takeProfit: '15%'
+      takeProfit: '15%',
+      trailingStopDistance: '1',
+      entryIndicator: 'MACD',
+      indicatorValue: 0,
+      dcaFrequency: 'weekly',
+      rebalanceThreshold: '10%'
     },
     {
       id: 3,
@@ -51,28 +66,74 @@ export const AutomationPanel = () => {
       profit: '-$125.75',
       trades: 8,
       stopLoss: '3%',
-      takeProfit: '6%'
+      takeProfit: '6%',
+      trailingStopDistance: '',
+      entryIndicator: '',
+      indicatorValue: '',
+      dcaFrequency: '',
+      rebalanceThreshold: ''
     }
   ];
 
   const clients = ['João Silva', 'Maria Santos', 'Carlos Oliveira', 'Ana Costa', 'Pedro Souza'];
   const assets = ['EUR/USD', 'GBP/USD', 'BTC/USD', 'ETH/USD', 'GOLD', 'S&P 500'];
+  const strategyTypes = [
+    { value: 'dca', label: 'DCA' },
+    { value: 'grid', label: 'Grid' },
+    { value: 'trailing_stop', label: 'Trailing Stop' },
+    { value: 'momentum', label: 'Momentum' },
+    { value: 'rebalancing', label: 'Rebalanceamento' },
+  ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Nova estratégia:', strategyForm);
-    setShowNewStrategy(false);
-    setStrategyForm({
-      name: '',
-      client: '',
-      asset: 'EUR/USD',
-      allocation: 5,
-      stopLoss: 2,
-      takeProfit: 4,
-      type: 'market',
-      startDate: '',
-      endDate: ''
-    });
+    // Monta o payload conforme o modelo do backend
+    const payload = {
+      name: strategyForm.name,
+      client: strategyForm.client,
+      symbol: strategyForm.asset,
+      capital_allocation: Number(strategyForm.capitalAllocation),
+      stop_loss_pct: Number(strategyForm.stopLossPct),
+      take_profit_pct: Number(strategyForm.takeProfitPct),
+      max_daily_loss: strategyForm.maxDailyLoss ? Number(strategyForm.maxDailyLoss) : null,
+      strategy_type: strategyForm.strategyType,
+      parameters: {
+        trailing_stop_distance: strategyForm.trailingStopDistance ? Number(strategyForm.trailingStopDistance) : null,
+        entry_indicator: strategyForm.entryIndicator,
+        indicator_value: strategyForm.indicatorValue ? Number(strategyForm.indicatorValue) : null,
+        dca_frequency: strategyForm.dcaFrequency,
+        rebalance_threshold: strategyForm.rebalanceThreshold ? Number(strategyForm.rebalanceThreshold) : null,
+      },
+      start_date: strategyForm.startDate || null,
+      end_date: strategyForm.endDate || null,
+    };
+    try {
+      await fetch('http://localhost:5000/api/automation/strategies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      setShowNewStrategy(false);
+      setStrategyForm({
+        name: '',
+        client: '',
+        asset: 'EUR/USD',
+        capitalAllocation: 5,
+        stopLossPct: 2,
+        takeProfitPct: 4,
+        maxDailyLoss: '',
+        strategyType: 'dca',
+        trailingStopDistance: '',
+        entryIndicator: '',
+        indicatorValue: '',
+        dcaFrequency: '',
+        rebalanceThreshold: '',
+        startDate: '',
+        endDate: ''
+      });
+    } catch (err) {
+      // Trate o erro conforme necessário
+    }
   };
 
   return (
@@ -146,8 +207,8 @@ export const AutomationPanel = () => {
                     type="number"
                     min="1"
                     max="50"
-                    value={strategyForm.allocation}
-                    onChange={(e) => setStrategyForm({...strategyForm, allocation: Number(e.target.value)})}
+                    value={strategyForm.capitalAllocation}
+                    onChange={(e) => setStrategyForm({...strategyForm, capitalAllocation: Number(e.target.value)})}
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
                   />
                 </div>
@@ -159,8 +220,8 @@ export const AutomationPanel = () => {
                     min="0.1"
                     max="20"
                     step="0.1"
-                    value={strategyForm.stopLoss}
-                    onChange={(e) => setStrategyForm({...strategyForm, stopLoss: Number(e.target.value)})}
+                    value={strategyForm.stopLossPct}
+                    onChange={(e) => setStrategyForm({...strategyForm, stopLossPct: Number(e.target.value)})}
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
                   />
                 </div>
@@ -172,22 +233,22 @@ export const AutomationPanel = () => {
                     min="0.1"
                     max="50"
                     step="0.1"
-                    value={strategyForm.takeProfit}
-                    onChange={(e) => setStrategyForm({...strategyForm, takeProfit: Number(e.target.value)})}
+                    value={strategyForm.takeProfitPct}
+                    onChange={(e) => setStrategyForm({...strategyForm, takeProfitPct: Number(e.target.value)})}
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Tipo de Ordem</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Tipo de Estratégia</label>
                   <select
-                    value={strategyForm.type}
-                    onChange={(e) => setStrategyForm({...strategyForm, type: e.target.value})}
+                    value={strategyForm.strategyType}
+                    onChange={e => setStrategyForm({ ...strategyForm, strategyType: e.target.value })}
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
                   >
-                    <option value="market">Ordem a Mercado</option>
-                    <option value="limit">Ordem Limite</option>
-                    <option value="stop">Ordem Stop</option>
+                    {strategyTypes.map(type => (
+                      <option key={type.value} value={type.value}>{type.label}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -209,6 +270,105 @@ export const AutomationPanel = () => {
                     onChange={(e) => setStrategyForm({...strategyForm, endDate: e.target.value})}
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
                   />
+                </div>
+
+                {/* Trailing Stop Distance */}
+                {strategyForm.strategyType === 'trailing_stop' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Trailing Stop (distância)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={strategyForm.trailingStopDistance}
+                      onChange={e => setStrategyForm({ ...strategyForm, trailingStopDistance: e.target.value })}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+                      placeholder="Ex: 0.5 (em % ou valor absoluto)"
+                    />
+                  </div>
+                )}
+                {/* Entry Indicator */}
+                {strategyForm.strategyType === 'momentum' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-2">Indicador de Entrada</label>
+                      <select
+                        value={strategyForm.entryIndicator}
+                        onChange={e => setStrategyForm({ ...strategyForm, entryIndicator: e.target.value })}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="">Nenhum</option>
+                        <option value="RSI">RSI</option>
+                        <option value="MACD">MACD</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-2">Valor do Indicador</label>
+                      <input
+                        type="number"
+                        value={strategyForm.indicatorValue}
+                        onChange={e => setStrategyForm({ ...strategyForm, indicatorValue: e.target.value })}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+                        placeholder="Ex: 30 (RSI), 0 (MACD)"
+                      />
+                    </div>
+                  </>
+                )}
+                {strategyForm.strategyType === 'dca' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Frequência DCA</label>
+                    <select
+                      value={strategyForm.dcaFrequency}
+                      onChange={e => setStrategyForm({ ...strategyForm, dcaFrequency: e.target.value })}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="">Nenhuma</option>
+                      <option value="daily">Diária</option>
+                      <option value="weekly">Semanal</option>
+                      <option value="monthly">Mensal</option>
+                    </select>
+                  </div>
+                )}
+                {strategyForm.strategyType === 'rebalancing' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Rebalanceamento (limite %)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={strategyForm.rebalanceThreshold}
+                      onChange={e => setStrategyForm({ ...strategyForm, rebalanceThreshold: e.target.value })}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+                      placeholder="Ex: 5 (rebalancear se variar 5%)"
+                    />
+                  </div>
+                )}
+                {/* Campo para maxDailyLoss */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Perda Máxima Diária (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={strategyForm.maxDailyLoss}
+                    onChange={e => setStrategyForm({ ...strategyForm, maxDailyLoss: e.target.value })}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+                    placeholder="Ex: 10 (encerra operações se atingir 10%)"
+                  />
+                </div>
+              </div>
+
+              {/* Placeholder de Backtesting */}
+              <div className="bg-slate-700/40 border border-slate-600/40 rounded-lg p-4 mt-4">
+                <h4 className="text-white font-semibold mb-2">Prévia de Backtesting</h4>
+                <p className="text-slate-300 text-sm">
+                  Com esses parâmetros, em dados históricos da última semana, o lucro estimado seria <span className="text-green-400 font-bold">+R$ 1.250,00</span>.<br/>
+                  (Simulação visual, sem cálculo real)
+                </p>
+                <div className="w-full h-16 bg-gradient-to-r from-green-400/30 to-blue-400/20 rounded mt-2 flex items-end">
+                  <div className="bg-green-400 h-10 w-1/6 rounded-l" />
+                  <div className="bg-blue-400 h-8 w-1/6" />
+                  <div className="bg-green-400 h-12 w-1/6" />
+                  <div className="bg-blue-400 h-6 w-1/6" />
+                  <div className="bg-green-400 h-14 w-1/6" />
+                  <div className="bg-blue-400 h-7 w-1/6 rounded-r" />
                 </div>
               </div>
 
@@ -235,7 +395,6 @@ export const AutomationPanel = () => {
       {/* Strategies List */}
       <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-white mb-4">Estratégias Ativas</h3>
-        
         <div className="space-y-4">
           {strategies.map((strategy) => (
             <div key={strategy.id} className="bg-slate-700/30 border border-slate-600/50 rounded-lg p-4">
@@ -281,7 +440,7 @@ export const AutomationPanel = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-8 gap-4 text-sm">
                 <div>
                   <p className="text-slate-400">Ativo</p>
                   <p className="font-semibold text-white">{strategy.asset}</p>
@@ -309,6 +468,26 @@ export const AutomationPanel = () => {
                 <div>
                   <p className="text-slate-400">Take Profit</p>
                   <p className="font-semibold text-green-400">{strategy.takeProfit}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Trailing Stop</p>
+                  <p className="font-semibold text-white">{strategy.trailingStopDistance || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Indicador</p>
+                  <p className="font-semibold text-white">{strategy.entryIndicator || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Valor Indicador</p>
+                  <p className="font-semibold text-white">{strategy.indicatorValue || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400">DCA</p>
+                  <p className="font-semibold text-white">{strategy.dcaFrequency || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Rebalance (%)</p>
+                  <p className="font-semibold text-white">{strategy.rebalanceThreshold || '-'}</p>
                 </div>
               </div>
             </div>

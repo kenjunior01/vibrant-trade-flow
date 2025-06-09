@@ -1,46 +1,64 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Activity, Users, Bot } from 'lucide-react';
 import { PerformanceChart } from './PerformanceChart';
 import { RecentTrades } from './RecentTrades';
 import { ActiveAutomations } from './ActiveAutomations';
+import { useAuth } from '@/hooks/useAuth';
 
 interface DashboardProps {
   userType: string;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ userType }) => {
+  const { token } = useAuth();
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      try {
+        let url = '';
+        if (userType === 'admin') {
+          url = 'http://localhost:5000/api/admin/dashboard-stats';
+        } else if (userType === 'trader' || userType === 'manager') {
+          url = 'http://localhost:5000/api/trading/wallet';
+        }
+        if (!url) return;
+        const res = await fetch(url, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Erro ao buscar estatísticas');
+        const data = await res.json();
+        setStats(data.stats || data);
+      } catch (e) {
+        setStats(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) fetchStats();
+  }, [userType, token]);
+
+  // Helper to map backend stats to cards
   const getStatsCards = () => {
-    switch (userType) {
-      case 'trader':
-        return [
-          { title: 'Saldo Total', value: '$45,250.00', change: '+2.5%', positive: true, icon: DollarSign },
-          { title: 'P&L Hoje', value: '+$1,125.50', change: '+2.5%', positive: true, icon: TrendingUp },
-          { title: 'Posições Abertas', value: '8', change: '+2', positive: true, icon: Activity },
-          { title: 'Performance 30d', value: '+15.8%', change: '+3.2%', positive: true, icon: TrendingUp }
-        ];
-      case 'manager':
-        return [
-          { title: 'Clientes Ativos', value: '24', change: '+3', positive: true, icon: Users },
-          { title: 'AUM Total', value: '$2.4M', change: '+5.8%', positive: true, icon: DollarSign },
-          { title: 'Automações Ativas', value: '12', change: '+2', positive: true, icon: Bot },
-          { title: 'Performance Média', value: '+12.4%', change: '+1.2%', positive: true, icon: TrendingUp }
-        ];
-      case 'admin':
-        return [
-          { title: 'Usuários Ativos', value: '1,247', change: '+12%', positive: true, icon: Users },
-          { title: 'Volume Diário', value: '$15.2M', change: '+8.3%', positive: true, icon: DollarSign },
-          { title: 'Gestores Ativos', value: '45', change: '+2', positive: true, icon: Activity },
-          { title: 'Taxa de Conversão', value: '68%', change: '+3%', positive: true, icon: TrendingUp }
-        ];
-      default:
-        return [
-          { title: 'Receita Total', value: '$890K', change: '+15%', positive: true, icon: DollarSign },
-          { title: 'Usuários Totais', value: '12,547', change: '+24%', positive: true, icon: Users },
-          { title: 'Uptime Sistema', value: '99.9%', change: '0%', positive: true, icon: Activity },
-          { title: 'Lucro Mensal', value: '$145K', change: '+18%', positive: true, icon: TrendingUp }
-        ];
+    if (loading || !stats) return Array(4).fill({ title: 'Carregando...', value: '...', change: '', positive: true, icon: DollarSign });
+    if (userType === 'admin') {
+      return [
+        { title: 'Usuários Ativos', value: stats.users?.active ?? '-', change: '+12%', positive: true, icon: Users },
+        { title: 'Volume Diário', value: stats.trading?.orders_today ? `$${stats.trading.orders_today} ordens` : '-', change: '+8.3%', positive: true, icon: DollarSign },
+        { title: 'Gestores Ativos', value: stats.users?.managers ?? '-', change: '+2', positive: true, icon: Activity },
+        { title: 'Taxa de Conversão', value: stats.system?.cache_hit_rate ?? '-', change: '+3%', positive: true, icon: TrendingUp }
+      ];
+    } else if (userType === 'trader' || userType === 'manager') {
+      return [
+        { title: 'Saldo Total', value: stats[0]?.balance ? `$${stats[0].balance.toLocaleString()}` : '-', change: '', positive: true, icon: DollarSign },
+        { title: 'Carteiras', value: stats.length, change: '', positive: true, icon: Activity },
+        { title: 'Última Atualização', value: stats[0]?.updated_at ? new Date(stats[0].updated_at).toLocaleDateString() : '-', change: '', positive: true, icon: TrendingUp },
+        { title: 'ID', value: stats[0]?.id ?? '-', change: '', positive: true, icon: Users }
+      ];
     }
+    return [];
   };
 
   return (

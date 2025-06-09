@@ -1,19 +1,46 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface RecentTradesProps {
   userType: string;
 }
 
 export const RecentTrades: React.FC<RecentTradesProps> = ({ userType }) => {
-  const trades = [
-    { symbol: 'EUR/USD', type: 'Compra', amount: '$5,000', profit: '+$125.50', positive: true, time: '14:32' },
-    { symbol: 'BTC/USD', type: 'Venda', amount: '$10,000', profit: '-$245.75', positive: false, time: '13:45' },
-    { symbol: 'GOLD', type: 'Compra', amount: '$7,500', profit: '+$89.25', positive: true, time: '12:18' },
-    { symbol: 'GBP/USD', type: 'Venda', amount: '$3,200', profit: '+$67.80', positive: true, time: '11:55' },
-    { symbol: 'ETH/USD', type: 'Compra', amount: '$8,500', profit: '+$156.90', positive: true, time: '10:42' }
-  ];
+  const { token } = useAuth();
+  const [trades, setTrades] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTrades = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('http://localhost:5000/api/trading/orders', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Erro ao buscar trades');
+        const result = await res.json();
+        // Map backend data to UI format
+        if (Array.isArray(result.orders)) {
+          setTrades(result.orders.map((order: any) => ({
+            symbol: order.asset_symbol,
+            type: order.side === 'buy' ? 'Compra' : 'Venda',
+            amount: order.quantity ? `$${order.quantity}` : '-',
+            profit: order.pnl !== undefined ? `${order.pnl >= 0 ? '+' : ''}$${order.pnl}` : '-',
+            positive: order.pnl >= 0,
+            time: order.created_at ? new Date(order.created_at).toLocaleTimeString() : '',
+          })));
+        } else {
+          setTrades([]);
+        }
+      } catch {
+        setTrades([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) fetchTrades();
+  }, [token]);
 
   return (
     <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
@@ -21,7 +48,11 @@ export const RecentTrades: React.FC<RecentTradesProps> = ({ userType }) => {
         {userType === 'manager' ? 'Operações dos Clientes' : 'Operações Recentes'}
       </h3>
       <div className="space-y-3">
-        {trades.map((trade, index) => (
+        {loading ? (
+          <div className="text-slate-400">Carregando...</div>
+        ) : trades.length === 0 ? (
+          <div className="text-slate-400">Nenhuma operação encontrada.</div>
+        ) : trades.map((trade, index) => (
           <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg hover:bg-slate-700/50 transition-colors">
             <div className="flex items-center space-x-3">
               <div className={`p-2 rounded-lg ${trade.positive ? 'bg-green-500/20' : 'bg-red-500/20'}`}>

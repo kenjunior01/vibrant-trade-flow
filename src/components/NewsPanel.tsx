@@ -1,75 +1,48 @@
-
 import React, { useState, useEffect } from 'react';
-import { Newspaper, ExternalLink, Clock } from 'lucide-react';
+import { Newspaper, ExternalLink, Clock, Smile, Meh, Frown } from 'lucide-react';
 
 interface NewsItem {
   id: string;
   title: string;
-  summary: string;
+  summary?: string;
+  content?: string;
   source: string;
-  publishedAt: string;
-  impact: 'high' | 'medium' | 'low';
-  category: string;
+  published_at: string;
+  url?: string;
+  sentiment_label: 'positive' | 'negative' | 'neutral';
+  sentiment_score: number;
+  category?: string;
 }
 
 export const NewsPanel = () => {
-  const [news, setNews] = useState<NewsItem[]>([
-    {
-      id: '1',
-      title: 'Fed mantém taxa de juros estável em 5.25%-5.50%',
-      summary: 'O Federal Reserve decidiu manter as taxas de juros inalteradas na reunião de dezembro, sinalizando cautela com a inflação.',
-      source: 'Reuters',
-      publishedAt: '2024-12-13T14:30:00Z',
-      impact: 'high',
-      category: 'Política Monetária'
-    },
-    {
-      id: '2',
-      title: 'Bitcoin atinge novo máximo histórico acima de $44,000',
-      summary: 'A criptomoeda líder mundial alcançou novos patamares em meio ao otimismo institucional e aprovação de ETFs.',
-      source: 'CoinDesk',
-      publishedAt: '2024-12-13T13:15:00Z',
-      impact: 'high',
-      category: 'Criptomoedas'
-    },
-    {
-      id: '3',
-      title: 'EUR/USD sob pressão após dados fracos da Zona do Euro',
-      summary: 'O par de moedas recua após divulgação de dados econômicos abaixo do esperado da região.',
-      source: 'ForexLive',
-      publishedAt: '2024-12-13T12:45:00Z',
-      impact: 'medium',
-      category: 'Forex'
-    },
-    {
-      id: '4',
-      title: 'Ouro se mantém estável próximo aos $2,030/oz',
-      summary: 'O metal precioso mantém estabilidade em meio à incerteza geopolítica e expectativas sobre política monetária.',
-      source: 'Kitco',
-      publishedAt: '2024-12-13T11:20:00Z',
-      impact: 'low',
-      category: 'Commodities'
-    },
-    {
-      id: '5',
-      title: 'S&P 500 fecha em alta de 0.8% liderado por tecnologia',
-      summary: 'O índice americano encerrou o pregão em alta, impulsionado pelos ganhos do setor de tecnologia.',
-      source: 'MarketWatch',
-      publishedAt: '2024-12-13T21:00:00Z',
-      impact: 'medium',
-      category: 'Ações'
-    }
-  ]);
-
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [loading, setLoading] = useState(false);
   const categories = ['Todas', 'Forex', 'Criptomoedas', 'Ações', 'Commodities', 'Política Monetária'];
 
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
-      case 'high': return 'bg-red-500/20 text-red-400';
-      case 'medium': return 'bg-yellow-500/20 text-yellow-400';
-      case 'low': return 'bg-green-500/20 text-green-400';
+  useEffect(() => {
+    setLoading(true);
+    fetch('http://localhost:5000/api/news/latest')
+      .then(res => res.json())
+      .then(data => setNews(data.articles || []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const getSentimentColor = (label: string) => {
+    switch (label) {
+      case 'positive': return 'bg-green-500/20 text-green-400';
+      case 'negative': return 'bg-red-500/20 text-red-400';
+      case 'neutral': return 'bg-yellow-500/20 text-yellow-400';
       default: return 'bg-slate-500/20 text-slate-400';
+    }
+  };
+
+  const getSentimentIcon = (label: string) => {
+    switch (label) {
+      case 'positive': return <Smile className="inline h-4 w-4 mr-1 text-green-400" />;
+      case 'negative': return <Frown className="inline h-4 w-4 mr-1 text-red-400" />;
+      case 'neutral': return <Meh className="inline h-4 w-4 mr-1 text-yellow-400" />;
+      default: return null;
     }
   };
 
@@ -77,7 +50,6 @@ export const NewsPanel = () => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
     if (diffInMinutes < 60) {
       return `${diffInMinutes}m atrás`;
     } else if (diffInMinutes < 1440) {
@@ -87,8 +59,8 @@ export const NewsPanel = () => {
     }
   };
 
-  const filteredNews = selectedCategory === 'Todas' 
-    ? news 
+  const filteredNews = selectedCategory === 'Todas'
+    ? news
     : news.filter(item => item.category === selectedCategory);
 
   return (
@@ -124,18 +96,22 @@ export const NewsPanel = () => {
 
       {/* News List */}
       <div className="space-y-4">
-        {filteredNews.map((item) => (
+        {loading ? (
+          <div className="text-center text-slate-400">Carregando notícias...</div>
+        ) : filteredNews.map((item) => (
           <div key={item.id} className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-blue-500/30 transition-all duration-300">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center space-x-3">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getImpactColor(item.impact)}`}>
-                  {item.impact.toUpperCase()}
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSentimentColor(item.sentiment_label)}`}
+                  title={`Sentimento: ${item.sentiment_label} (${item.sentiment_score?.toFixed(2)})`}>
+                  {getSentimentIcon(item.sentiment_label)}
+                  {item.sentiment_label?.toUpperCase()} {item.sentiment_score !== undefined && `(${item.sentiment_score.toFixed(2)})`}
                 </span>
-                <span className="text-blue-400 text-sm font-medium">{item.category}</span>
+                {item.category && <span className="text-blue-400 text-sm font-medium">{item.category}</span>}
               </div>
               <div className="flex items-center text-slate-400 text-sm">
                 <Clock className="h-3 w-3 mr-1" />
-                {formatTime(item.publishedAt)}
+                {formatTime(item.published_at)}
               </div>
             </div>
 
@@ -144,17 +120,19 @@ export const NewsPanel = () => {
             </h3>
 
             <p className="text-slate-300 mb-4 leading-relaxed">
-              {item.summary}
+              {item.summary || item.content}
             </p>
 
             <div className="flex items-center justify-between">
               <span className="text-slate-400 text-sm">
                 Fonte: {item.source}
               </span>
-              <button className="flex items-center text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
-                Ler mais
-                <ExternalLink className="h-3 w-3 ml-1" />
-              </button>
+              {item.url && (
+                <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
+                  Ler mais
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </a>
+              )}
             </div>
           </div>
         ))}

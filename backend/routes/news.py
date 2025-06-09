@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 import requests
@@ -6,29 +5,22 @@ import os
 from datetime import datetime, timedelta
 from models import NewsArticle
 from app import db
+from textblob import TextBlob
 
 news_bp = Blueprint('news', __name__)
 
 NEWS_API_BASE_URL = "https://newsapi.org/v2"
 
 def analyze_sentiment(text):
-    """Analyze sentiment of news text (mock implementation)"""
-    # In production, use NLTK, TextBlob, or a dedicated sentiment API
-    
-    positive_words = ['bull', 'rise', 'gain', 'profit', 'growth', 'up', 'high', 'positive', 'strong', 'boost']
-    negative_words = ['bear', 'fall', 'loss', 'drop', 'decline', 'down', 'low', 'negative', 'weak', 'crash']
-    
-    text_lower = text.lower()
-    
-    positive_count = sum(1 for word in positive_words if word in text_lower)
-    negative_count = sum(1 for word in negative_words if word in text_lower)
-    
-    if positive_count > negative_count:
-        return 'positive', (positive_count - negative_count) / (positive_count + negative_count + 1)
-    elif negative_count > positive_count:
-        return 'negative', (negative_count - positive_count) / (positive_count + negative_count + 1) * -1
+    """Analyze sentiment of news text using TextBlob"""
+    blob = TextBlob(text)
+    polarity = blob.sentiment.polarity
+    if polarity > 0.1:
+        return 'positive', float(polarity)
+    elif polarity < -0.1:
+        return 'negative', float(polarity)
     else:
-        return 'neutral', 0.0
+        return 'neutral', float(polarity)
 
 @news_bp.route('/latest', methods=['GET'])
 @jwt_required()

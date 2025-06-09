@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 
 interface TickerData {
   symbol: string;
@@ -9,26 +9,16 @@ interface TickerData {
 }
 
 export const MarketTicker = () => {
-  const [tickerData, setTickerData] = useState<TickerData[]>([
-    { symbol: 'EUR/USD', price: 1.0856, change: 0.0024, changePercent: 0.22 },
-    { symbol: 'GBP/USD', price: 1.2745, change: -0.0018, changePercent: -0.14 },
-    { symbol: 'BTC/USD', price: 43250.00, change: 1250.50, changePercent: 2.98 },
-    { symbol: 'ETH/USD', price: 2650.25, change: -45.75, changePercent: -1.70 },
-    { symbol: 'GOLD', price: 2034.50, change: 12.30, changePercent: 0.61 },
-    { symbol: 'S&P 500', price: 4785.60, change: 23.40, changePercent: 0.49 }
-  ]);
+  const [tickerData, setTickerData] = useState<TickerData[]>([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTickerData(prev => prev.map(item => ({
-        ...item,
-        price: item.price + (Math.random() - 0.5) * (item.price * 0.001),
-        change: (Math.random() - 0.5) * (item.price * 0.002),
-        changePercent: (Math.random() - 0.5) * 2
-      })));
-    }, 2000);
-
-    return () => clearInterval(interval);
+    const socket = io('http://localhost:5000/market_data');
+    socket.on('market_quotes', (quotes: TickerData[]) => {
+      setTickerData(quotes);
+    });
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   return (
