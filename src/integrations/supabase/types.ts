@@ -495,28 +495,40 @@ export type Database = {
       }
       wallets: {
         Row: {
+          balance: number | null
           created_at: string | null
           description: string | null
+          equity: number | null
+          free_margin: number | null
           id: string
           is_default: boolean | null
+          margin_used: number | null
           name: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          balance?: number | null
           created_at?: string | null
           description?: string | null
+          equity?: number | null
+          free_margin?: number | null
           id?: string
           is_default?: boolean | null
+          margin_used?: number | null
           name: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          balance?: number | null
           created_at?: string | null
           description?: string | null
+          equity?: number | null
+          free_margin?: number | null
           id?: string
           is_default?: boolean | null
+          margin_used?: number | null
           name?: string
           updated_at?: string | null
           user_id?: string
@@ -528,7 +540,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_manager_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       experience_level: "beginner" | "intermediate" | "advanced"

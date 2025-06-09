@@ -25,6 +25,10 @@ export interface Wallet {
   name: string;
   description?: string;
   is_default: boolean;
+  balance?: number;
+  margin_used?: number;
+  free_margin?: number;
+  equity?: number;
   created_at: string;
   updated_at: string;
 }
@@ -41,8 +45,8 @@ export interface Position {
   close_price?: number;
   leverage: number;
   status: 'open' | 'closed';
-  pnl: number;
-  opened_at: string;
+  pnl?: number;
+  opened_at?: string;
   closed_at?: string;
 }
 
@@ -95,4 +99,13 @@ export interface Transaction {
   amount: number;
   description?: string;
   created_at: string;
+}
+
+export interface MarketData {
+  symbol: string;
+  price: number;
+  timestamp: number;
+  volume: number;
+  change: number;
+  changePercent: number;
 }
