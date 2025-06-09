@@ -49,8 +49,10 @@ def get_latest_news():
                 'source': 'database'
             }), 200
         
-        # Fetch from News API
+        # Fetch from News API using configured key
         api_key = os.environ.get('NEWS_API_KEY')
+        print(f"Using News API key: {api_key[:10]}..." if api_key else "No API key found")
+        
         if not api_key:
             return get_mock_news()
         
@@ -61,10 +63,15 @@ def get_latest_news():
             'apiKey': api_key
         }
         
+        print(f"Fetching news from NewsAPI with params: {params}")
         response = requests.get(f"{NEWS_API_BASE_URL}/top-headlines", params=params, timeout=10)
         data = response.json()
         
+        print(f"NewsAPI response status: {response.status_code}")
+        print(f"NewsAPI response: {data}")
+        
         if response.status_code != 200 or data.get('status') != 'ok':
+            print(f"NewsAPI error: {data.get('message', 'Unknown error')}")
             return get_mock_news()
         
         articles = []
@@ -97,12 +104,14 @@ def get_latest_news():
         
         return jsonify({
             'articles': articles,
-            'source': 'api'
+            'source': 'NewsAPI'
         }), 200
         
     except Exception as e:
         print(f"Error fetching news: {e}")
         return get_mock_news()
+
+# ... keep existing code (search endpoint, sentiment summary, and mock news functions)
 
 def get_mock_news():
     """Return mock news data when API is not available"""
@@ -224,7 +233,7 @@ def search_news():
         
         return jsonify({
             'articles': articles,
-            'source': 'api'
+            'source': 'NewsAPI'
         }), 200
         
     except Exception as e:

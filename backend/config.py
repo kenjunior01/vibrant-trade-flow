@@ -18,10 +18,11 @@ class Config:
     # Redis for Celery and Caching
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
     
-    # API Keys
-    ALPHA_VANTAGE_API_KEY = os.environ.get('ALPHA_VANTAGE_API_KEY')
+    # API Keys - Updated with provided keys
+    ALPHA_VANTAGE_API_KEY = os.environ.get('ALPHA_VANTAGE_API_KEY') or 'AB0QC22CG0MRH8BW'
+    COIN_API_KEY = os.environ.get('COIN_API_KEY') or '714ffe42-653c-4823-9441-ba51968585f1'
+    NEWS_API_KEY = os.environ.get('NEWS_API_KEY') or 'ec6eb9359a364cdea8ebea612bbfe207'
     FINNHUB_API_KEY = os.environ.get('FINNHUB_API_KEY')
-    NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
     
     # Celery
     CELERY_BROKER_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'

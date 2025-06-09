@@ -13,6 +13,7 @@ market_bp = Blueprint('market', __name__)
 ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
 FINNHUB_BASE_URL = "https://finnhub.io/api/v1"
 COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
+COINAPI_BASE_URL = "https://rest.coinapi.io/v1"
 
 # Cache for market data (in production, use Redis)
 market_cache = {}
@@ -50,6 +51,36 @@ def get_alpha_vantage_data(symbol, function="GLOBAL_QUOTE"):
         print(f"Alpha Vantage API error: {e}")
         return None
 
+def get_coinapi_data(symbol_id):
+    """Get cryptocurrency data from CoinAPI"""
+    api_key = os.environ.get('COIN_API_KEY')
+    if not api_key:
+        return None
+    
+    cache_key = f"coinapi_{symbol_id}"
+    now = datetime.now()
+    
+    # Check cache
+    if cache_key in market_cache:
+        cache_data, timestamp = market_cache[cache_key]
+        if (now - timestamp).seconds < CACHE_DURATION:
+            return cache_data
+    
+    headers = {'X-CoinAPI-Key': api_key}
+    
+    try:
+        # Get current price
+        response = requests.get(f"{COINAPI_BASE_URL}/exchangerate/{symbol_id}/USD", 
+                              headers=headers, timeout=10)
+        data = response.json()
+        
+        # Cache the data
+        market_cache[cache_key] = (data, now)
+        return data
+    except Exception as e:
+        print(f"CoinAPI error: {e}")
+        return None
+
 def get_finnhub_data(symbol):
     """Get data from Finnhub API"""
     api_key = os.environ.get('FINNHUB_API_KEY')
@@ -80,7 +111,7 @@ def get_finnhub_data(symbol):
         return None
 
 def get_coingecko_data(ids):
-    """Get cryptocurrency data from CoinGecko API"""
+    """Get cryptocurrency data from CoinGecko API (fallback)"""
     cache_key = f"cg_{ids}"
     now = datetime.now()
     
@@ -116,7 +147,7 @@ def get_quotes():
         # Define the instruments we want to track
         instruments = {
             'forex': ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF'],
-            'crypto': ['bitcoin', 'ethereum', 'binancecoin', 'cardano'],
+            'crypto': ['BTC', 'ETH', 'BNB', 'ADA'],
             'stocks': ['AAPL', 'GOOGL', 'MSFT', 'TSLA'],
             'commodities': ['XAUUSD', 'XAGUSD', 'USOIL', 'UKOIL']
         }
@@ -134,28 +165,46 @@ def get_quotes():
                     'change': float(rate_data.get('9. Change', 0)),
                     'change_percent': float(rate_data.get('10. Change Percent', '0%').replace('%', '')),
                     'type': 'forex',
-                    'last_updated': rate_data.get('6. Last Refreshed')
+                    'last_updated': rate_data.get('6. Last Refreshed'),
+                    'source': 'Alpha Vantage'
                 }
         
-        # Get Cryptocurrency data from CoinGecko
-        crypto_ids = ','.join(instruments['crypto'])
-        crypto_data = get_coingecko_data(crypto_ids)
-        if crypto_data:
-            for crypto_id in instruments['crypto']:
-                if crypto_id in crypto_data:
-                    data = crypto_data[crypto_id]
-                    symbol = crypto_id.upper() + 'USD'
-                    quotes[symbol] = {
-                        'symbol': symbol,
-                        'price': data.get('usd', 0),
-                        'change': 0,  # Calculate from 24hr change
-                        'change_percent': data.get('usd_24h_change', 0),
-                        'type': 'crypto',
-                        'last_updated': datetime.now().isoformat()
-                    }
-                    # Calculate absolute change
-                    if quotes[symbol]['change_percent'] != 0:
-                        quotes[symbol]['change'] = quotes[symbol]['price'] * (quotes[symbol]['change_percent'] / 100)
+        # Get Cryptocurrency data from CoinAPI (primary) or CoinGecko (fallback)
+        for crypto_symbol in instruments['crypto']:
+            # Try CoinAPI first
+            coinapi_data = get_coinapi_data(crypto_symbol)
+            if coinapi_data and 'rate' in coinapi_data:
+                symbol = crypto_symbol + 'USD'
+                quotes[symbol] = {
+                    'symbol': symbol,
+                    'price': coinapi_data.get('rate', 0),
+                    'change': 0,  # CoinAPI doesn't provide change directly
+                    'change_percent': 0,
+                    'type': 'crypto',
+                    'last_updated': coinapi_data.get('time', datetime.now().isoformat()),
+                    'source': 'CoinAPI'
+                }
+            else:
+                # Fallback to CoinGecko
+                crypto_ids = {'BTC': 'bitcoin', 'ETH': 'ethereum', 'BNB': 'binancecoin', 'ADA': 'cardano'}
+                crypto_id = crypto_ids.get(crypto_symbol)
+                if crypto_id:
+                    crypto_data = get_coingecko_data(crypto_id)
+                    if crypto_data and crypto_id in crypto_data:
+                        data = crypto_data[crypto_id]
+                        symbol = crypto_symbol + 'USD'
+                        quotes[symbol] = {
+                            'symbol': symbol,
+                            'price': data.get('usd', 0),
+                            'change': 0,
+                            'change_percent': data.get('usd_24h_change', 0),
+                            'type': 'crypto',
+                            'last_updated': datetime.now().isoformat(),
+                            'source': 'CoinGecko'
+                        }
+                        # Calculate absolute change
+                        if quotes[symbol]['change_percent'] != 0:
+                            quotes[symbol]['change'] = quotes[symbol]['price'] * (quotes[symbol]['change_percent'] / 100)
         
         # Get Stock data from Finnhub
         for symbol in instruments['stocks']:
@@ -169,7 +218,8 @@ def get_quotes():
                     'change': change,
                     'change_percent': change_percent,
                     'type': 'stock',
-                    'last_updated': datetime.now().isoformat()
+                    'last_updated': datetime.now().isoformat(),
+                    'source': 'Finnhub'
                 }
         
         # Add some mock commodity data if APIs don't provide
@@ -186,7 +236,8 @@ def get_quotes():
                     'change': round(change, 2),
                     'change_percent': round(change_pct, 2),
                     'type': 'commodity',
-                    'last_updated': datetime.now().isoformat()
+                    'last_updated': datetime.now().isoformat(),
+                    'source': 'Mock Data'
                 }
         
         return jsonify({'quotes': quotes}), 200
@@ -194,6 +245,8 @@ def get_quotes():
     except Exception as e:
         print(f"Error fetching quotes: {e}")
         return jsonify({'error': 'Failed to fetch market data'}), 500
+
+# ... keep existing code (chart data endpoints, symbols endpoint, and helper functions)
 
 @market_bp.route('/chart/<symbol>', methods=['GET'])
 @jwt_required()
