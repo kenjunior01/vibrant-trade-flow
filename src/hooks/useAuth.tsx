@@ -1,39 +1,27 @@
 
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { User } from '@/types/trading';
+import { AuthContextType, AuthProviderProps } from '@/types/auth';
+import { AuthService } from '@/services/authService';
+import { 
+  storeAuthData, 
+  clearAuthData, 
+  getStoredAuthData, 
+  convertFlaskUserToUser 
+} from '@/utils/authUtils';
 import { toast } from 'sonner';
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, userData: Partial<User>) => Promise<void>;
-  signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<User>) => Promise<void>;
-}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const FLASK_API_URL = 'http://localhost:5000/api';
-
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing auth token on app load
-    const token = localStorage.getItem('auth_token');
-    const userData = localStorage.getItem('user_data');
+    const { token, userData } = getStoredAuthData();
     
     if (token && userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-      } catch (error) {
-        console.error('Error parsing stored user data:', error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-      }
+      setUser(userData);
     }
     
     setLoading(false);
@@ -43,45 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       
-      const response = await fetch(`${FLASK_API_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      // Store auth token and user data
-      localStorage.setItem('auth_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user_data', JSON.stringify(data.user));
-
-      // Convert Flask user data to our User type
-      const userData: User = {
-        id: data.user.id,
-        email: data.user.email,
-        full_name: data.user.full_name,
-        role: data.user.role,
-        risk_profile: data.user.risk_profile || 'medium',
-        balance: 10000,
-        plan: 'free',
-        avatar_url: null,
-        phone: null,
-        date_of_birth: null,
-        country: null,
-        company: null,
-        experience_level: 'beginner',
-        investment_goals: null,
-        created_at: data.user.created_at,
-        updated_at: new Date().toISOString(),
-      };
-
+      const data = await AuthService.signIn(email, password);
+      
+      storeAuthData(data);
+      const userData = convertFlaskUserToUser(data.user);
+      
       setUser(userData);
       toast.success('Login realizado com sucesso!');
     } catch (error) {
@@ -97,50 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       
-      const response = await fetch(`${FLASK_API_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          full_name: userData.full_name,
-          role: userData.role || 'trader',
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
-
-      // Store auth token and user data
-      localStorage.setItem('auth_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user_data', JSON.stringify(data.user));
-
-      // Convert Flask user data to our User type
-      const newUserData: User = {
-        id: data.user.id,
-        email: data.user.email,
-        full_name: data.user.full_name,
-        role: data.user.role,
-        risk_profile: data.user.risk_profile || 'medium',
-        balance: 10000,
-        plan: 'free',
-        avatar_url: null,
-        phone: null,
-        date_of_birth: null,
-        country: null,
-        company: null,
-        experience_level: 'beginner',
-        investment_goals: null,
-        created_at: data.user.created_at,
-        updated_at: new Date().toISOString(),
-      };
-
+      const data = await AuthService.signUp(email, password, userData);
+      
+      storeAuthData(data);
+      const newUserData = convertFlaskUserToUser(data.user);
+      
       setUser(newUserData);
       toast.success('Conta criada com sucesso!');
     } catch (error) {
@@ -154,11 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Clear local storage
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user_data');
-      
+      clearAuthData();
       setUser(null);
       toast.success('Logout realizado com sucesso!');
     } catch (error) {
@@ -172,10 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) throw new Error('No user logged in');
 
     try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) throw new Error('No auth token');
-
-      // For now, just update locally since we don't have a Flask endpoint for profile updates
       const updatedUser = { ...user, ...updates };
       setUser(updatedUser);
       localStorage.setItem('user_data', JSON.stringify(updatedUser));
