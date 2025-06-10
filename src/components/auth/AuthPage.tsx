@@ -36,7 +36,7 @@ export function AuthPage() {
           <div className="mb-6">
             <h3 className="text-xl font-semibold text-white mb-2">Test Login</h3>
             <p className="text-gray-300 text-sm mb-4">
-              Use these demo accounts to test the platform
+              Use estas contas demo para testar a plataforma
             </p>
           </div>
           <LoginTest />

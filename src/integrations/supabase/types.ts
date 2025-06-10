@@ -540,8 +540,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_admin_or_above: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
       is_admin_user: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_manager_or_above: {
+        Args: { user_id: string }
         Returns: boolean
       }
       is_manager_user: {
