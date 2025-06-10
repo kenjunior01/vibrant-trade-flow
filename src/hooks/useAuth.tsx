@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         full_name: data.user.full_name,
         role: data.user.role,
         risk_profile: data.user.risk_profile || 'medium',
-        balance: 10000, // Default balance
+        balance: 10000,
         plan: 'free',
         avatar_url: null,
         phone: null,
