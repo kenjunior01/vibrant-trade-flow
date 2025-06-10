@@ -69,9 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         full_name: data.user.full_name,
         role: data.user.role,
         risk_profile: data.user.risk_profile || 'medium',
-        is_active: data.user.is_active,
-        created_at: data.user.created_at,
-        manager_id: data.user.manager_id,
         balance: 10000, // Default balance
         plan: 'free',
         avatar_url: null,
@@ -81,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         company: null,
         experience_level: 'beginner',
         investment_goals: null,
+        created_at: data.user.created_at,
         updated_at: new Date().toISOString(),
       };
 
@@ -130,9 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         full_name: data.user.full_name,
         role: data.user.role,
         risk_profile: data.user.risk_profile || 'medium',
-        is_active: data.user.is_active,
-        created_at: data.user.created_at,
-        manager_id: data.user.manager_id,
         balance: 10000,
         plan: 'free',
         avatar_url: null,
@@ -142,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         company: null,
         experience_level: 'beginner',
         investment_goals: null,
+        created_at: data.user.created_at,
         updated_at: new Date().toISOString(),
       };
 
