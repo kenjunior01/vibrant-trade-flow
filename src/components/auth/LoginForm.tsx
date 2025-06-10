@@ -29,6 +29,11 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     }
   };
 
+  const fillDemoCredentials = (demoEmail: string, demoPassword: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm transition-colors">
       <CardHeader>
@@ -48,6 +53,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              placeholder="Digite seu email"
             />
           </div>
           <div className="space-y-2">
@@ -59,7 +65,51 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              placeholder="Digite sua senha"
             />
+          </div>
+
+          {/* Demo credentials quick access */}
+          <div className="border-t pt-4">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Acesso rápido (demo):</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fillDemoCredentials('trader@test.com', '123456')}
+                className="text-xs"
+              >
+                Trader
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fillDemoCredentials('manager@test.com', '123456')}
+                className="text-xs"
+              >
+                Manager
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fillDemoCredentials('admin@test.com', '123456')}
+                className="text-xs"
+              >
+                Admin
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fillDemoCredentials('superadmin@test.com', '123456')}
+                className="text-xs"
+              >
+                Super Admin
+              </Button>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">

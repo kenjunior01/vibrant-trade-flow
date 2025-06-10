@@ -1,8 +1,7 @@
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types/trading';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -15,120 +14,182 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const FLASK_API_URL = 'http://localhost:5000/api';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchUserProfile(session.user);
+    // Check for existing auth token on app load
+    const token = localStorage.getItem('auth_token');
+    const userData = localStorage.getItem('user_data');
+    
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
       }
-      setLoading(false);
-    };
-
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        await fetchUserProfile(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    }
+    
+    setLoading(false);
   }, []);
 
-  const fetchUserProfile = async (authUser: SupabaseUser) => {
+  const signIn = async (email: string, password: string) => {
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
+      setLoading(true);
+      
+      const response = await fetch(`${FLASK_API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      if (profile) {
-        const userData: User = {
-          id: profile.id,
-          email: profile.email || authUser.email || '',
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url,
-          phone: profile.phone,
-          date_of_birth: profile.date_of_birth,
-          country: profile.country,
-          company: profile.company,
-          role: profile.role === 'super_admin' ? 'superadmin' : (profile.role === 'account_manager' ? 'manager' : profile.role),
-          experience_level: profile.experience_level,
-          risk_profile: profile.risk_profile,
-          manager_id: profile.manager_id,
-          balance: profile.balance || 0,
-          plan: profile.plan || 'free',
-          investment_goals: profile.investment_goals,
-          created_at: profile.created_at,
-          updated_at: profile.updated_at,
-        };
-        setUser(userData);
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
       }
+
+      // Store auth token and user data
+      localStorage.setItem('auth_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      localStorage.setItem('user_data', JSON.stringify(data.user));
+
+      // Convert Flask user data to our User type
+      const userData: User = {
+        id: data.user.id,
+        email: data.user.email,
+        full_name: data.user.full_name,
+        role: data.user.role,
+        risk_profile: data.user.risk_profile || 'medium',
+        is_active: data.user.is_active,
+        created_at: data.user.created_at,
+        manager_id: data.user.manager_id,
+        balance: 10000, // Default balance
+        plan: 'free',
+        avatar_url: null,
+        phone: null,
+        date_of_birth: null,
+        country: null,
+        company: null,
+        experience_level: 'beginner',
+        investment_goals: null,
+        updated_at: new Date().toISOString(),
+      };
+
+      setUser(userData);
+      toast.success('Login realizado com sucesso!');
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Login error:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao fazer login');
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) throw error;
-  };
-
   const signUp = async (email: string, password: string, userData: Partial<User>) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`${FLASK_API_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
           full_name: userData.full_name,
           role: userData.role || 'trader',
-          experience_level: userData.experience_level || 'beginner',
-          risk_profile: userData.risk_profile || 'medium',
-        },
-      },
-    });
+        }),
+      });
 
-    if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      // Store auth token and user data
+      localStorage.setItem('auth_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      localStorage.setItem('user_data', JSON.stringify(data.user));
+
+      // Convert Flask user data to our User type
+      const newUserData: User = {
+        id: data.user.id,
+        email: data.user.email,
+        full_name: data.user.full_name,
+        role: data.user.role,
+        risk_profile: data.user.risk_profile || 'medium',
+        is_active: data.user.is_active,
+        created_at: data.user.created_at,
+        manager_id: data.user.manager_id,
+        balance: 10000,
+        plan: 'free',
+        avatar_url: null,
+        phone: null,
+        date_of_birth: null,
+        country: null,
+        company: null,
+        experience_level: 'beginner',
+        investment_goals: null,
+        updated_at: new Date().toISOString(),
+      };
+
+      setUser(newUserData);
+      toast.success('Conta criada com sucesso!');
+    } catch (error) {
+      console.error('Signup error:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar conta');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      // Clear local storage
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_data');
+      
+      setUser(null);
+      toast.success('Logout realizado com sucesso!');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Erro ao fazer logout');
+      throw error;
+    }
   };
 
   const updateProfile = async (updates: Partial<User>) => {
     if (!user) throw new Error('No user logged in');
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: updates.full_name,
-        phone: updates.phone,
-        country: updates.country,
-        company: updates.company,
-        avatar_url: updates.avatar_url,
-        experience_level: updates.experience_level,
-        risk_profile: updates.risk_profile,
-        investment_goals: updates.investment_goals,
-      })
-      .eq('id', user.id);
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) throw new Error('No auth token');
 
-    if (error) throw error;
-
-    setUser(prev => prev ? { ...prev, ...updates } : null);
+      // For now, just update locally since we don't have a Flask endpoint for profile updates
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      localStorage.setItem('user_data', JSON.stringify(updatedUser));
+      
+      toast.success('Perfil atualizado com sucesso!');
+    } catch (error) {
+      console.error('Update profile error:', error);
+      toast.error('Erro ao atualizar perfil');
+      throw error;
+    }
   };
 
   return (

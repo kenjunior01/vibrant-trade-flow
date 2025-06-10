@@ -1,9 +1,10 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Copy } from 'lucide-react';
+import { Copy, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 const testUsers = [
   {
@@ -37,9 +38,19 @@ const testUsers = [
 ];
 
 export function TestUserCredentials() {
+  const { signIn } = useAuth();
+
   const copyCredentials = (email: string, password: string) => {
     navigator.clipboard.writeText(`Email: ${email}\nSenha: ${password}`);
     toast.success('Credenciais copiadas para a área de transferência!');
+  };
+
+  const loginWithTestUser = async (email: string, password: string) => {
+    try {
+      await signIn(email, password);
+    } catch (error) {
+      // Error is handled in the signIn function
+    }
   };
 
   return (
@@ -67,15 +78,26 @@ export function TestUserCredentials() {
                 <div>
                   <span className="font-medium">Senha:</span> {user.password}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-2"
-                  onClick={() => copyCredentials(user.email, user.password)}
-                >
-                  <Copy className="h-3 w-3 mr-2" />
-                  Copiar Credenciais
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => copyCredentials(user.email, user.password)}
+                  >
+                    <Copy className="h-3 w-3 mr-2" />
+                    Copiar
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => loginWithTestUser(user.email, user.password)}
+                  >
+                    <LogIn className="h-3 w-3 mr-2" />
+                    Entrar
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
