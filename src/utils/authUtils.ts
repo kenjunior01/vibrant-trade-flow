@@ -33,12 +33,22 @@ export const getStoredAuthData = (): { token: string | null; userData: User | nu
 };
 
 export const convertFlaskUserToUser = (flaskUser: FlaskAuthResponse['user']): User => {
+  // Ensure role is a valid user role
+  const validRoles = ['trader', 'manager', 'admin', 'superadmin'] as const;
+  const role = validRoles.includes(flaskUser.role as any) ? flaskUser.role as User['role'] : 'trader';
+  
+  // Ensure risk_profile is a valid risk level
+  const validRiskProfiles = ['low', 'medium', 'high'] as const;
+  const riskProfile = flaskUser.risk_profile && validRiskProfiles.includes(flaskUser.risk_profile as any) 
+    ? flaskUser.risk_profile as User['risk_profile'] 
+    : 'medium';
+
   return {
     id: flaskUser.id,
     email: flaskUser.email,
     full_name: flaskUser.full_name,
-    role: flaskUser.role,
-    risk_profile: flaskUser.risk_profile || 'medium',
+    role: role,
+    risk_profile: riskProfile,
     balance: 10000,
     plan: 'free',
     avatar_url: null,
