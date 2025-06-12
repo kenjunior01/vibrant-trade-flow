@@ -1,5 +1,4 @@
-
-export const FLASK_API_URL = 'http://localhost:5000/api';
+export const FLASK_API_URL = 'http://127.0.0.1:8000/api'; // URL do Django
 
 export const AUTH_STORAGE_KEYS = {
   TOKEN: 'auth_token',

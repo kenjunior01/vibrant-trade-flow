@@ -1,9 +1,9 @@
 Django>=4.2
-djangorestframework
-djangorestframework-simplejwt
-psycopg2-binary
-channels
-channels-redis
-gunicorn
-python-dotenv
-requests
+psycopg2-binary>=2.9
+djangorestframework>=3.14
+djangorestframework-simplejwt>=5.2
+django-cors-headers>=4.0
+channels>=4.0
+channels-redis>=4.1
+celery>=5.3
+redis>=5.0
