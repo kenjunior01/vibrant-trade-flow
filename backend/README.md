@@ -1,7 +1,6 @@
-
 # Trading Platform Backend
 
-Backend Flask completo para plataforma de trading com integração de APIs de dados reais, sistema de autenticação avançado e funcionalidades de automação.
+Backend Django completo para plataforma de trading com integração de APIs de dados reais, sistema de autenticação avançado e funcionalidades de automação.
 
 ## Características Principais
 
@@ -26,7 +25,7 @@ Backend Flask completo para plataforma de trading com integração de APIs de da
 - Celery para execução de tarefas em background
 
 ### 💬 **Chat em Tempo Real**
-- WebSockets com Flask-SocketIO
+- WebSockets com Django Channels
 - Salas de chat baseadas em roles
 - Chat privado entre manager e clientes
 - Indicadores de digitação
