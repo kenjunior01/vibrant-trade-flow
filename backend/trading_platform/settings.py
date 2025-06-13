@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'news',
     'automation',
     'chat',
+    'django_vite',  # Adicionado para integração com Vite
 ]
 
 MIDDLEWARE = [
@@ -84,7 +85,16 @@ CHANNEL_LAYERS = {
     },
 }
 
-STATIC_URL = '/static/'
+# Configuração do Django Vite
+DJANGO_VITE_ASSETS_PATH = BASE_DIR / "static" / "dist"
+DJANGO_VITE_DEV_MODE = DEBUG  # Usar o modo de desenvolvimento do Vite quando o Django está em DEBUG
+
+# Configuração dos Ficheiros Estáticos
+STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    DJANGO_VITE_ASSETS_PATH,
+]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # External API keys
 ALPHA_VANTAGE_API_KEY = os.environ.get('ALPHA_VANTAGE_API_KEY', '')

@@ -1,0 +1,14 @@
+{% load vite %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vibrant Trade Flow</title>
+    {% vite_hmr_client %} {# Para hot-reloading em desenvolvimento #}
+    {% vite_asset 'src/main.tsx' %} {# Carrega o CSS e JS principal #}
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
