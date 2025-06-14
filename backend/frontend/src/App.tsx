@@ -1,11 +1,10 @@
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from '@/hooks/useAuth';
-import { AuthPage } from '@/components/auth/AuthPage';
+import { AuthProvider } from '@/hooks/useAuth'; // Ainda precisamos do AuthProvider, mas simplificado
 import { HomePage } from '@/components/home/HomePage';
 import { DashboardPage } from '@/components/dashboard/DashboardPage';
 import { NewTradingPlatform } from '@/components/trading/NewTradingPlatform';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 
@@ -18,22 +17,14 @@ function App() {
         <Router>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/auth" element={<AuthPage />} />
+            {/* A rota /auth foi removida */}
             <Route 
               path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              } 
+              element={<DashboardPage />} // Rota direta, sem ProtectedRoute
             />
             <Route 
               path="/trading" 
-              element={
-                <ProtectedRoute>
-                  <NewTradingPlatform />
-                </ProtectedRoute>
-              } 
+              element={<NewTradingPlatform />} // Rota direta, sem ProtectedRoute
             />
           </Routes>
         </Router>
