@@ -1,0 +1,12 @@
+{% for article in articles %}
+  <div class="news-item" style="margin-bottom: 1.5em;">
+    <h4><a href="{{ article.url }}" target="_blank">{{ article.title }}</a></h4>
+    <p>{{ article.description }}</p>
+    {% if article.urlToImage %}
+      <img src="{{ article.urlToImage }}" alt="thumb" style="width: 120px; height: 80px; object-fit: cover;" />
+    {% endif %}
+    <small>{{ article.source.name }} - {{ article.publishedAt|slice:":10" }}</small>
+  </div>
+{% empty %}
+  <p>Nenhuma notícia encontrada.</p>
+{% endfor %}

@@ -1,0 +1,16 @@
+{% for position in positions %}
+  <div class="position-item" style="margin-bottom: 1em;">
+    <p>Ativo: {{ position.asset }}</p>
+    <p>Quantidade: {{ position.quantity }}</p>
+    <p>Preço de Abertura: {{ position.open_price }}</p>
+    <button 
+      hx-post="{% url 'close_position' position.id %}"
+      hx-target="#positions-container"
+      hx-swap="innerHTML"
+      hx-confirm="Tem a certeza que deseja fechar esta posição?">
+      Fechar Posição
+    </button>
+  </div>
+{% empty %}
+  <p>Não há posições abertas.</p>
+{% endfor %}

@@ -1,0 +1,13 @@
+<h3>Painel de Automações</h3>
+<ul>
+  {% for automation in automations %}
+    <li>
+      <strong>{{ automation.name }}</strong> - {{ automation.status }}
+      <button hx-post="{% url 'toggle_automation' automation.id %}" hx-target="#automation-panel-container" hx-swap="innerHTML">
+        {% if automation.status == 'active' %}Desativar{% else %}Ativar{% endif %}
+      </button>
+    </li>
+  {% empty %}
+    <li>Sem automações cadastradas.</li>
+  {% endfor %}
+</ul>

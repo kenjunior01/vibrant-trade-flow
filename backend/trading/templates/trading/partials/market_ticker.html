@@ -1,0 +1,8 @@
+<h3>Market Ticker</h3>
+<ul>
+  {% for ticker in tickers %}
+    <li>{{ ticker.symbol }}: {{ ticker.price }}</li>
+  {% empty %}
+    <li>Sem dados de mercado.</li>
+  {% endfor %}
+</ul>

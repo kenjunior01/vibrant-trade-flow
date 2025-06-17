@@ -1,0 +1,12 @@
+<h3>Chat</h3>
+<div id="chat-messages" style="height:200px;overflow-y:auto;border:1px solid #ccc;padding:8px;margin-bottom:8px;">
+  {% for msg in messages %}
+    <div><strong>{{ msg.user.username }}:</strong> {{ msg.text }}</div>
+  {% empty %}
+    <div>Nenhuma mensagem ainda.</div>
+  {% endfor %}
+</div>
+<form id="chat-form" hx-post="{% url 'chat-message-htmx' %}" hx-target="#chat-messages" hx-swap="afterend">
+  <input type="text" name="text" placeholder="Digite sua mensagem..." required style="width:70%">
+  <button type="submit">Enviar</button>
+</form>

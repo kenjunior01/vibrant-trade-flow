@@ -1,0 +1,23 @@
+<h3>Recent Trades</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Ativo</th>
+      <th>Preço</th>
+      <th>Quantidade</th>
+      <th>Data/Hora</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for trade in trades %}
+      <tr>
+        <td>{{ trade.asset }}</td>
+        <td>{{ trade.price }}</td>
+        <td>{{ trade.quantity }}</td>
+        <td>{{ trade.timestamp }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">Sem negociações recentes.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

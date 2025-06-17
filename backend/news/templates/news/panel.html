@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Notícias de Mercado</h2>
+  <div id="news-panel" hx-get="{% url 'news-panel-htmx' %}" hx-trigger="load" hx-target="#news-panel" hx-swap="innerHTML">
+    <p>Carregando notícias...</p>
+  </div>
+{% endblock %}

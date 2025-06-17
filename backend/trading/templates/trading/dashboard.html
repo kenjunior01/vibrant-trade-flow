@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Minhas Posições</h2>
+  <div id="positions-container" hx-get="{% url 'positions-list-htmx' %}" hx-trigger="load" hx-target="#positions-container" hx-swap="innerHTML">
+    <p>Carregando posições...</p>
+  </div>
+  <hr>
+  <h2>Order Book</h2>
+  <div id="orderbook-container" hx-get="{% url 'orderbook-htmx' %}" hx-trigger="load" hx-target="#orderbook-container" hx-swap="innerHTML">
+    <p>Carregando livro de ofertas...</p>
+  </div>
+  <hr>
+  <h2>Portfolio</h2>
+  <div id="portfolio-container" hx-get="{% url 'portfolio-htmx' %}" hx-trigger="load" hx-target="#portfolio-container" hx-swap="innerHTML">
+    <p>Carregando portfólio...</p>
+  </div>
+  <hr>
+  <h2>Negociações Recentes</h2>
+  <div id="recent-trades-container" hx-get="{% url 'recent-trades-htmx' %}" hx-trigger="load" hx-target="#recent-trades-container" hx-swap="innerHTML">
+    <p>Carregando negociações recentes...</p>
+  </div>
+  <hr>
+  <h2>Performance Chart</h2>
+  <div id="performance-chart-container" hx-get="{% url 'performance-chart-htmx' %}" hx-trigger="load" hx-target="#performance-chart-container" hx-swap="innerHTML">
+    <p>Carregando gráfico de performance...</p>
+  </div>
+  <hr>
+  <h2>Market Ticker</h2>
+  <div id="market-ticker-container" hx-get="{% url 'market-ticker-htmx' %}" hx-trigger="load" hx-target="#market-ticker-container" hx-swap="innerHTML">
+    <p>Carregando market ticker...</p>
+  </div>
+  <hr>
+  <h2>Painel de Automações</h2>
+  <div id="automation-panel-container" hx-get="{% url 'automation-panel-htmx' %}" hx-trigger="load" hx-target="#automation-panel-container" hx-swap="innerHTML">
+    <p>Carregando automações...</p>
+  </div>
+  <hr>
+  <h2>Chat</h2>
+  <div id="chat-panel-container" hx-get="{% url 'chat-panel-htmx' %}" hx-trigger="load" hx-target="#chat-panel-container" hx-swap="innerHTML">
+    <p>Carregando chat...</p>
+  </div>
+{% endblock %}
