@@ -1,81 +1,71 @@
-import React, { useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import React from 'react';
+import { Clock, TrendingUp, TrendingDown } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
-interface RecentTradesProps {
-  userType: string;
+interface Trade {
+  id: string;
+  symbol: string;
+  side: 'buy' | 'sell';
+  size: number;
+  price: number;
+  time: string;
+  pnl?: number;
 }
 
-export const RecentTrades: React.FC<RecentTradesProps> = ({ userType }) => {
-  const { token } = useAuth();
-  const [trades, setTrades] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+interface RecentTradesProps {
+  trades: Trade[];
+}
 
-  useEffect(() => {
-    const fetchTrades = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch('http://localhost:5000/api/trading/orders', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('Erro ao buscar trades');
-        const result = await res.json();
-        // Map backend data to UI format
-        if (Array.isArray(result.orders)) {
-          setTrades(result.orders.map((order: any) => ({
-            symbol: order.asset_symbol,
-            type: order.side === 'buy' ? 'Compra' : 'Venda',
-            amount: order.quantity ? `$${order.quantity}` : '-',
-            profit: order.pnl !== undefined ? `${order.pnl >= 0 ? '+' : ''}$${order.pnl}` : '-',
-            positive: order.pnl >= 0,
-            time: order.created_at ? new Date(order.created_at).toLocaleTimeString() : '',
-          })));
-        } else {
-          setTrades([]);
-        }
-      } catch {
-        setTrades([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (token) fetchTrades();
-  }, [token]);
-
+export const RecentTrades: React.FC<RecentTradesProps> = ({ trades }) => {
   return (
-    <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
-      <h3 className="text-lg font-semibold text-white mb-4">
-        {userType === 'manager' ? 'Operações dos Clientes' : 'Operações Recentes'}
-      </h3>
-      <div className="space-y-3">
-        {loading ? (
-          <div className="text-slate-400">Carregando...</div>
-        ) : trades.length === 0 ? (
-          <div className="text-slate-400">Nenhuma operação encontrada.</div>
-        ) : trades.map((trade, index) => (
-          <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg hover:bg-slate-700/50 transition-colors">
-            <div className="flex items-center space-x-3">
-              <div className={`p-2 rounded-lg ${trade.positive ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
-                {trade.positive ? (
-                  <TrendingUp className="h-4 w-4 text-green-400" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-400" />
-                )}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          Recent Trades
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {trades.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No recent trades</p>
+        ) : (
+          <div className="space-y-3">
+            {trades.map((trade) => (
+              <div key={trade.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${trade.side === 'buy' ? 'bg-green-100 dark:bg-green-900/20' : 'bg-red-100 dark:bg-red-900/20'}`}>
+                    {trade.side === 'buy' ? (
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-red-600" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{trade.symbol}</span>
+                      <Badge variant={trade.side === 'buy' ? 'default' : 'destructive'}>
+                        {trade.side.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Size: {trade.size} | ${trade.price.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">{trade.time}</p>
+                  {trade.pnl !== undefined && (
+                    <p className={`text-sm font-medium ${trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-white">{trade.symbol}</p>
-                <p className="text-sm text-slate-400">{trade.type} • {trade.amount}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className={`font-semibold ${trade.positive ? 'text-green-400' : 'text-red-400'}`}>
-                {trade.profit}
-              </p>
-              <p className="text-sm text-slate-400">{trade.time}</p>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
