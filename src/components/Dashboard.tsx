@@ -97,7 +97,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userType }) => {
       {/* Charts and Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <PerformanceChart userType={userType} />
-        <RecentTrades userType={userType} />
+        <RecentTrades trades={[]} />
       </div>
 
       {/* Conditional Content */}

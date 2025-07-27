@@ -75,7 +75,14 @@ export function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden transition-colors">
       {/* Market Ticker - Novo componente no topo */}
-      <MarketTicker />
+      <MarketTicker prices={{
+        'BTCUSD': 43250.00,
+        'ETHUSD': 2650.25,
+        'EURUSD': 1.0856,
+        'GBPUSD': 1.2745,
+        'XAUUSD': 2034.50,
+        'AAPL': 190.50
+      }} />
       
       {/* Floating Background Elements */}
       <FloatingElements />
